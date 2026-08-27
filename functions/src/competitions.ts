@@ -21,7 +21,7 @@ const STRUCTURAL = [
   "maxEntriesPerCustomer", "bookingFeePence",
 ];
 
-interface Bundle { quantity: number; pricePence: number; label?: string }
+interface Bundle { quantity: number; pricePence: number; label: string | null }
 
 function cleanString(v: unknown, field: string, max: number, required = true): string {
   const s = typeof v === "string" ? v.trim() : "";
@@ -101,7 +101,7 @@ function buildPayload(data: any, partial: boolean): Record<string, unknown> {
     out.allocationMode = data.allocationMode;
   }
   if (has("bundles")) {
-    const price = (out.entryPricePence as number) ?? Number(data.entryPricePence) ?? 0;
+    const price = typeof out.entryPricePence === "number" ? out.entryPricePence : Number(data.entryPricePence ?? 0);
     out.bundles = cleanBundles(data.bundles, price);
   }
   if (need("closesAtMillis")) {
@@ -170,7 +170,7 @@ export const updateCompetition = onCall({ region: REGION, enforceAppCheck: true 
   const payload = buildPayload(req.data ?? {}, true);
   // Once someone has paid, the deal they bought into is fixed.
   if ((current.entriesSold ?? 0) > 0) {
-    const blocked = STRUCTURAL.filter((f) => payload[f] !== undefined || (f === "maxEntries" && payload.maxEntries !== undefined));
+    const blocked = STRUCTURAL.filter((f) => payload[f] !== undefined);
     if (blocked.length) {
       throw new HttpsError(
         "failed-precondition",

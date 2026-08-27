@@ -195,6 +195,22 @@ fun OrderDetailScreen(
                     Text(Money.format(order.totalPence), style = RrrType.Numeric, color = RrrColors.Gold)
                 }
 
+                if (order.hasInstantWins) {
+                    Spacer(Modifier.height(28.dp))
+                    Text("Instant wins", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)
+                    Spacer(Modifier.height(8.dp))
+                    order.instantWins.forEach { win ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(win.prizeName, style = MaterialTheme.typography.bodyMedium, color = RrrColors.Bone)
+                            Text(
+                                "No. ${win.entryNumber} · ${Money.format(win.valuePence)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = RrrColors.Gold,
+                            )
+                        }
+                    }
+                }
+
                 if (order.entryNumbers.isNotEmpty()) {
                     Spacer(Modifier.height(28.dp))
                     Text("Entry numbers", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)

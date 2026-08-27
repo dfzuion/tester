@@ -32,6 +32,13 @@ export {
   deleteDraftCompetition,
 } from "./competitions";
 
+export {
+  addInstantWinPrizes,
+  listInstantWins,
+  removeInstantWinPrizes,
+  setInstantWinClaimStatus,
+} from "./instantwins";
+
 export { notifyEndingSoon } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";

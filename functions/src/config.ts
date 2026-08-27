@@ -22,6 +22,7 @@ export const Collections = {
   orders: "orders",
   payments: "payments",
   winners: "winners",
+  instantWins: "instantWins",
   draws: "draws",
   notifications: "notifications",
   favourites: "favourites",

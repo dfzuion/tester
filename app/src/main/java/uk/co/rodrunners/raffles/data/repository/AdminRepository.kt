@@ -9,6 +9,8 @@ import kotlinx.coroutines.tasks.await
 import uk.co.rodrunners.raffles.core.Collections
 import uk.co.rodrunners.raffles.core.Functions
 import uk.co.rodrunners.raffles.data.model.Competition
+import uk.co.rodrunners.raffles.data.model.InstantWinClaim
+import uk.co.rodrunners.raffles.data.model.InstantWinStock
 import uk.co.rodrunners.raffles.data.model.Order
 
 data class DashboardStats(
@@ -117,7 +119,75 @@ class AdminRepository @Inject constructor(
             .call(mapOf("competitionId" to competitionId)).await()
     }
 
+    // ---- Instant wins -------------------------------------------------
+
+    suspend fun addInstantWins(competitionId: String, prizes: List<InstantWinStock>): Int {
+        val result = functions.getHttpsCallable(Functions.ADD_INSTANT_WINS).call(
+            mapOf(
+                "competitionId" to competitionId,
+                "prizes" to prizes.map {
+                    mapOf(
+                        "prizeName" to it.prizeName.trim(),
+                        "valuePence" to it.valuePence,
+                        "quantity" to it.count,
+                    )
+                },
+            )
+        ).await()
+        return ((result.getData() as Map<*, *>)["added"] as? Number)?.toInt() ?: 0
+    }
+
+    suspend fun instantWins(competitionId: String): InstantWinOverview {
+        val result = functions.getHttpsCallable(Functions.LIST_INSTANT_WINS)
+            .call(mapOf("competitionId" to competitionId)).await()
+        val data = result.getData() as Map<*, *>
+        val stock = (data["unclaimed"] as? List<*>).orEmpty().mapNotNull { row ->
+            (row as? Map<*, *>)?.let {
+                InstantWinStock(
+                    prizeName = it["prizeName"] as? String ?: return@let null,
+                    valuePence = (it["valuePence"] as? Number)?.toInt() ?: 0,
+                    count = (it["count"] as? Number)?.toInt() ?: 0,
+                )
+            }
+        }
+        val claims = (data["won"] as? List<*>).orEmpty().mapNotNull { row ->
+            (row as? Map<*, *>)?.let {
+                InstantWinClaim(
+                    id = it["id"] as? String ?: return@let null,
+                    prizeName = it["prizeName"] as? String ?: "",
+                    valuePence = (it["valuePence"] as? Number)?.toInt() ?: 0,
+                    entryNumber = (it["entryNumber"] as? Number)?.toInt() ?: 0,
+                    wonByName = it["wonByName"] as? String,
+                    wonAtMillis = (it["wonAtMillis"] as? Number)?.toLong(),
+                    claimStatus = it["claimStatus"] as? String ?: "pending",
+                )
+            }
+        }
+        return InstantWinOverview(stock, claims)
+    }
+
+    suspend fun removeInstantWins(competitionId: String, prizeName: String, count: Int) {
+        functions.getHttpsCallable(Functions.REMOVE_INSTANT_WINS).call(
+            mapOf("competitionId" to competitionId, "prizeName" to prizeName, "count" to count)
+        ).await()
+    }
+
+    suspend fun setInstantWinClaimStatus(instantWinId: String, claimStatus: String) {
+        functions.getHttpsCallable(Functions.SET_INSTANT_WIN_CLAIM).call(
+            mapOf("instantWinId" to instantWinId, "claimStatus" to claimStatus)
+        ).await()
+    }
+
     suspend fun seedDemoData() {
         functions.getHttpsCallable(Functions.SEED_DEMO).call().await()
     }
+}
+
+/** What the admin instant-win screen needs in one round trip. */
+data class InstantWinOverview(
+    val stock: List<InstantWinStock> = emptyList(),
+    val claims: List<InstantWinClaim> = emptyList(),
+) {
+    val unclaimedCount: Int get() = stock.sumOf { it.count }
+    val unclaimedValuePence: Int get() = stock.sumOf { it.valuePence * it.count }
 }

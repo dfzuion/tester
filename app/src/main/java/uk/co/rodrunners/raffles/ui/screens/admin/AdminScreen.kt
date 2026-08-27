@@ -59,6 +59,7 @@ fun AdminScreen(
     onOpenCompetition: (String) -> Unit,
     onNewCompetition: () -> Unit = {},
     onEditCompetition: (String) -> Unit = {},
+    onOpenInstantWins: (String) -> Unit = {},
     viewModel: AdminViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -129,6 +130,7 @@ fun AdminScreen(
                     busy = state.busyCompetitionId == competition.id,
                     onOpen = { onOpenCompetition(competition.id) },
                     onEdit = { onEditCompetition(competition.id) },
+                    onInstantWins = { onOpenInstantWins(competition.id) },
                     onAction = { action -> confirming = action to competition },
                 )
             }
@@ -230,7 +232,7 @@ private fun confirmBody(action: String, competition: Competition) = when (action
 }
 
 @Composable
-private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
+internal fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
             .clip(RrrShapes.large)
@@ -249,6 +251,7 @@ private fun AdminCompetitionCard(
     busy: Boolean,
     onOpen: () -> Unit,
     onEdit: () -> Unit = {},
+    onInstantWins: () -> Unit = {},
     onAction: (String) -> Unit,
 ) {
     Column(
@@ -293,6 +296,7 @@ private fun AdminCompetitionCard(
                 else -> Unit
             }
             OutlineButton("Edit", onEdit, enabled = !busy)
+            OutlineButton("Instant wins", onInstantWins, enabled = !busy)
             OutlineButton("View", onOpen, enabled = !busy)
         }
     }

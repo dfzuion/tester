@@ -450,6 +450,11 @@ private fun CompleteStep(
         )
     }
 
+    if (order.hasInstantWins) {
+        Spacer(Modifier.height(24.dp))
+        InstantWinBanner(order.instantWins, order.instantWinValuePence)
+    }
+
     Spacer(Modifier.height(28.dp))
     Text("Your entry numbers", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)
     Spacer(Modifier.height(12.dp))
@@ -520,5 +525,61 @@ private fun CheckoutFooter(
             CheckoutStep.COMPLETE -> QuietButton("Back to raffles", onClose)
             else -> Unit
         }
+    }
+}
+
+/**
+ * The moment that makes instant wins worth having. Shown on the confirmation
+ * step whenever the order picked up a loaded number.
+ */
+@Composable
+private fun InstantWinBanner(
+    wins: List<uk.co.rodrunners.raffles.data.model.InstantWinAward>,
+    totalPence: Int,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RrrShapes.large)
+            .background(RrrColors.GoldDim)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            if (wins.size == 1) "Instant win!" else "${wins.size} instant wins!",
+            style = MaterialTheme.typography.headlineSmall,
+            color = RrrColors.GoldBright,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Worth ${Money.format(totalPence)} — we'll be in touch about getting it to you.",
+            style = MaterialTheme.typography.bodySmall,
+            color = RrrColors.Bone,
+        )
+        Spacer(Modifier.height(12.dp))
+        wins.forEach { win ->
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    win.prizeName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = RrrColors.Bone,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "No. ${win.entryNumber}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = RrrColors.Mist,
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Your entries are still in the main draw as well.",
+            style = MaterialTheme.typography.labelSmall,
+            color = RrrColors.Mist,
+        )
     }
 }

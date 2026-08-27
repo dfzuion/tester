@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import uk.co.rodrunners.raffles.core.Collections
+import uk.co.rodrunners.raffles.data.model.MyInstantWin
 import uk.co.rodrunners.raffles.data.model.Winner
 
 @Singleton
@@ -32,6 +33,20 @@ class ResultsRepository @Inject constructor(private val db: FirebaseFirestore) {
             .addSnapshotListener { snap, err ->
                 if (err != null) { close(err); return@addSnapshotListener }
                 trySend(snap?.toObjects(Winner::class.java) ?: emptyList())
+            }
+        awaitClose { reg.remove() }
+    }
+
+    /**
+     * Instant wins the customer holds. Rules only ever return prizes already
+     * marked won and belonging to this uid, so an unclaimed prize can't leak.
+     */
+    fun myInstantWins(uid: String): Flow<List<MyInstantWin>> = callbackFlow {
+        val reg = db.collection(Collections.INSTANT_WINS)
+            .whereEqualTo("wonBy", uid)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { close(err); return@addSnapshotListener }
+                trySend(snap?.toObjects(MyInstantWin::class.java) ?: emptyList())
             }
         awaitClose { reg.remove() }
     }

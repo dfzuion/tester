@@ -24,6 +24,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
+import uk.co.rodrunners.raffles.ui.screens.admin.InstantWinsScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.ForgotPasswordScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.LoginScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.RegisterScreen
@@ -337,6 +338,7 @@ fun RootNavHost(
                 onOpenCompetition = { navController.navigate(Routes.competitionDetail(it)) },
                 onNewCompetition = { navController.navigate(Routes.ADMIN_NEW_COMPETITION) },
                 onEditCompetition = { navController.navigate(Routes.adminEditCompetition(it)) },
+                onOpenInstantWins = { navController.navigate(Routes.adminInstantWins(it)) },
             )
         }
 
@@ -345,6 +347,13 @@ fun RootNavHost(
                 competitionId = null,
                 onBack = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.ADMIN_INSTANT_WINS) { entry ->
+            InstantWinsScreen(
+                competitionId = entry.arguments?.getString("competitionId").orEmpty(),
+                onBack = { navController.popBackStack() },
             )
         }
 

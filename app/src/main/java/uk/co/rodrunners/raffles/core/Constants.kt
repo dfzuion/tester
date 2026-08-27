@@ -15,6 +15,7 @@ object Collections {
     const val ADMIN_USERS = "adminUsers"
     const val PROMOTIONS = "promotions"
     const val AUDIT_LOGS = "auditLogs"
+    const val INSTANT_WINS = "instantWins"
 }
 
 object Functions {
@@ -36,6 +37,10 @@ object Functions {
     const val CREATE_COMPETITION = "createCompetition"
     const val UPDATE_COMPETITION = "updateCompetition"
     const val DELETE_DRAFT_COMPETITION = "deleteDraftCompetition"
+    const val ADD_INSTANT_WINS = "addInstantWinPrizes"
+    const val LIST_INSTANT_WINS = "listInstantWins"
+    const val REMOVE_INSTANT_WINS = "removeInstantWinPrizes"
+    const val SET_INSTANT_WIN_CLAIM = "setInstantWinClaimStatus"
 }
 
 object NotificationChannels {

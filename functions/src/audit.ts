@@ -7,7 +7,9 @@ export type AuditAction =
   | "competition.cancelled" | "competition.deleted" | "order.created" | "payment.confirmed"
   | "payment.failed" | "entries.allocated" | "refund.processed"
   | "winner.selected" | "result.published" | "account.suspended"
-  | "admin.role.changed" | "content.updated" | "promotion.created";
+  | "admin.role.changed" | "content.updated" | "promotion.created"
+  | "instantwin.added" | "instantwin.removed" | "instantwin.awarded"
+  | "instantwin.claim.updated";
 
 export interface AuditParams {
   action: AuditAction;

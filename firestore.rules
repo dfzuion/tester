@@ -76,6 +76,18 @@ service cloud.firestore {
     match /rateLimits/{id} { allow read, write: if false; }
     match /mail/{id}     { allow read, write: if false; }
 
+    /**
+     * Unclaimed prizes are invisible to every client - knowing which numbers
+     * are loaded would break the game. A won prize is readable by the person
+     * who won it, and by anyone for the public "recent wins" feed.
+     */
+    match /instantWins/{id} {
+      allow get, list: if isAdmin()
+        || (resource.data.status == "won"
+            && (resource.data.wonBy == request.auth.uid || resource.data.published == true));
+      allow write: if false;
+    }
+
     match /winners/{id} {
       allow get, list: if isAdmin() || resource.data.published == true;
       allow write: if false;

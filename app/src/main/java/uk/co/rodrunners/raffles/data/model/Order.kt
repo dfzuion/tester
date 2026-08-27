@@ -15,6 +15,7 @@ data class Order(
     val competitionImageUrl: String? = null,
     val quantity: Int = 0,
     val entryNumbers: List<Int> = emptyList(),
+    val instantWins: List<InstantWinAward> = emptyList(),
     val breakdown: PriceBreakdown? = null,
     val totalPence: Int = 0,
     val currency: String = "gbp",
@@ -26,6 +27,8 @@ data class Order(
     val paidAt: Timestamp? = null,
 ) {
     val createdAtMillis: Long get() = createdAt?.toDate()?.time ?: 0L
+    val hasInstantWins: Boolean get() = instantWins.isNotEmpty()
+    val instantWinValuePence: Int get() = instantWins.sumOf { it.valuePence }
     val isPaid: Boolean get() = paymentStatus == "paid"
     val statusLabel: String get() = when (paymentStatus) {
         "paid" -> "Paid"

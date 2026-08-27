@@ -4,6 +4,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import Stripe from "stripe";
 import { Collections, REGION, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } from "./config";
 import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
+import { awardInstantWins } from "./instantwins";
 import { computePrice, validatePromotion } from "./pricing";
 import { writeAudit } from "./audit";
 import { queueEmail, pushToUser, createUserNotification } from "./notifications";
@@ -212,6 +213,27 @@ async function handleSucceeded(intent: Stripe.PaymentIntent) {
     competitionTitle: result.competitionTitle,
     numbers: result.entryNumbers,
   });
+
+  // Instant wins are settled after the entries exist, so a prize can only ever
+  // attach to a number the customer genuinely holds.
+  const instantWins = await awardInstantWins({
+    competitionId: result.competitionId,
+    numbers: result.entryNumbers,
+    userId: result.userId,
+    userDisplayName: result.userDisplayName,
+    orderId,
+  });
+  if (instantWins.length) {
+    await admin.firestore().collection(Collections.orders).doc(orderId).update({
+      instantWins: instantWins.map((w) => ({
+        instantWinId: w.id,
+        entryNumber: w.entryNumber,
+        prizeName: w.prizeName,
+        valuePence: w.valuePence,
+        imageUrl: w.imageUrl,
+      })),
+    });
+  }
 
   if (result.breakdown?.promoCode) await recordRedemption(result.breakdown.promoCode, result.userId, orderId);
 

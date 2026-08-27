@@ -28,6 +28,8 @@ object Routes {
     const val ADMIN_NEW_COMPETITION = "admin/competition/new"
     const val ADMIN_EDIT_COMPETITION = "admin/competition/{competitionId}"
     fun adminEditCompetition(id: String) = "admin/competition/$id"
+    const val ADMIN_INSTANT_WINS = "admin/competition/{competitionId}/instant-wins"
+    fun adminInstantWins(id: String) = "admin/competition/$id/instant-wins"
 
     const val COMPETITION_DETAIL = "competition/{competitionId}"
     fun competitionDetail(id: String) = "competition/$id"
