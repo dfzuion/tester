@@ -48,36 +48,16 @@ jobs:
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
-      # Firebase asks for every declared parameter at deploy time. Plain
-      # config values come from a dotenv file; secrets must already exist in
-      # Secret Manager. Anything missing gets an obvious placeholder so the
-      # deploy completes - real values are set afterwards and survive, because
-      # existing secrets are never overwritten.
-      - name: Ensure parameters and secrets exist
+      # Plain config values come from a dotenv file. The secrets themselves
+      # must already exist in Secret Manager - the CLI cannot create them
+      # non-interactively, so they are made once in the console by hand.
+      - name: Write the config parameters
         env:
           PROJECT: rod-runners-raffles
         run: |
-          set -x
-          cat > functions/.env."$PROJECT" <<'ENVEOF'
-          SUPPORT_EMAIL=support@rodrunnersraffles.co.uk
-          FROM_EMAIL=no-reply@rodrunnersraffles.co.uk
-          ENVEOF
-          sed -i 's/^[[:space:]]*//' functions/.env."$PROJECT"
-          cat functions/.env."$PROJECT"
-
-          for NAME in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET SENDGRID_API_KEY ADMIN_BOOTSTRAP_KEY; do
-            if firebase functions:secrets:access "$NAME" --project "$PROJECT" >/dev/null 2>&1; then
-              echo "secret $NAME already exists - leaving it alone"
-            else
-              echo "creating placeholder secret $NAME"
-              printf 'PLACEHOLDER_REPLACE_ME' > /tmp/secret.txt
-              firebase functions:secrets:set "$NAME" --project "$PROJECT" \
-                --data-file /tmp/secret.txt --non-interactive
-              rm -f /tmp/secret.txt
-            fi
-          done
-          echo "--- secrets now present ---"
-          firebase functions:secrets:get --project "$PROJECT" || true
+          printf 'SUPPORT_EMAIL=support@rodrunnersraffles.co.uk\nFROM_EMAIL=no-reply@rodrunnersraffles.co.uk\n' \
+            > "functions/.env.$PROJECT"
+          cat "functions/.env.$PROJECT"
 
       - name: Deploy
         env:
