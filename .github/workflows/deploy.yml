@@ -1,0 +1,78 @@
+name: Deploy backend
+
+# Pushes the Cloud Functions, Firestore rules and indexes to Firebase.
+# Actions tab -> Deploy backend -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to deploy"
+        required: true
+        default: "everything"
+        type: choice
+        options: ["everything", "functions", "rules"]
+      enforceAppCheck:
+        description: "Require App Check on callable functions (turn off while testing debug builds)"
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install tooling
+        run: npm install -g firebase-tools@13
+
+      - name: Build functions
+        working-directory: functions
+        run: npm ci && npm run build
+
+      - name: Authenticate
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set. Add the service account JSON first."
+            exit 1
+          fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy
+        env:
+          RRR_ENFORCE_APP_CHECK: ${{ inputs.enforceAppCheck }}
+          PROJECT: rod-runners-raffles
+        run: |
+          set -o pipefail
+          case "${{ inputs.target }}" in
+            functions) ONLY="functions" ;;
+            rules)     ONLY="firestore:rules,firestore:indexes,storage" ;;
+            *)         ONLY="functions,firestore:rules,firestore:indexes,storage" ;;
+          esac
+          firebase deploy --only "$ONLY" --project "$PROJECT" --non-interactive --force 2>&1 | tee deploy.log
+
+      - name: Publish the log when it fails
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/logs && cp deploy.log /tmp/logs/deploy.log 2>/dev/null || echo "no log produced" > /tmp/logs/deploy.log
+          cd /tmp/logs
+          git init -q -b ci-logs
+          git config user.email "ci@example.com"
+          git config user.name "ci"
+          git add deploy.log
+          git commit -qm "deploy log for run $GITHUB_RUN_ID"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
