@@ -10,6 +10,8 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -39,15 +41,19 @@ jobs:
           set -o pipefail
           gradle assembleStagingDebug --stacktrace 2>&1 | tee build.log
 
-      - name: Publish build log to the job summary
+      - name: Publish build log to the ci-logs branch
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          {
-            echo '### Build failure (tail of the Gradle output)'
-            echo '```'
-            tail -c 50000 build.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p /tmp/logs && cp build.log /tmp/logs/build.log
+          cd /tmp/logs
+          git init -q -b ci-logs
+          git config user.email "ci@example.com"
+          git config user.name "ci"
+          git add build.log
+          git commit -qm "build log for run $GITHUB_RUN_ID"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs
 
       - uses: actions/upload-artifact@v4
         with:
