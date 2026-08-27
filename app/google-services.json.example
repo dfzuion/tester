@@ -1,27 +1,85 @@
 {
   "project_info": {
-    "project_number": "REPLACE_WITH_YOUR_SENDER_ID",
+    "project_number": "000000000000",
     "project_id": "rod-runners-raffles",
     "storage_bucket": "rod-runners-raffles.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "REPLACE_WITH_YOUR_APP_ID",
-        "android_client_info": { "package_name": "uk.co.rodrunners.raffles" }
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "uk.co.rodrunners.raffles"
+        }
       },
       "oauth_client": [],
-      "api_key": [{ "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "REPLACE_WITH_YOUR_DEBUG_APP_ID",
-        "android_client_info": { "package_name": "uk.co.rodrunners.raffles.debug" }
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "uk.co.rodrunners.raffles.debug"
+        }
       },
       "oauth_client": [],
-      "api_key": [{ "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY" }],
-      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "uk.co.rodrunners.raffles.staging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "uk.co.rodrunners.raffles.staging.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
