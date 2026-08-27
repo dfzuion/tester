@@ -1,0 +1,44 @@
+name: Test APK
+
+# Builds an installable APK without anyone needing Android Studio.
+# Actions tab -> Test APK -> Run workflow, then download the artifact.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            echo "Using the configured Firebase project."
+          else
+            cp app/google-services.json.example app/google-services.json
+            echo "::warning::No GOOGLE_SERVICES_JSON secret set. This APK will install and open, but every screen that needs data will show a connection error. Add the secret for a working build."
+          fi
+
+      - name: Build
+        run: gradle assembleStagingDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rod-runners-raffles-apk
+          path: app/build/outputs/apk/staging/debug/*.apk
+          retention-days: 30

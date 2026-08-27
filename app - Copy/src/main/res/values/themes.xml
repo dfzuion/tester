@@ -1,0 +1,15 @@
+<resources>
+    <style name="Theme.RodRunners.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_ink</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.RodRunners</item>
+    </style>
+
+    <style name="Theme.RodRunners" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/brand_ink</item>
+    </style>
+
+    <style name="Theme.RodRunners.Transparent" parent="android:Theme.Translucent.NoTitleBar" />
+</resources>

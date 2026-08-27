@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isImage() { return request.resource.contentType.matches('image/.*'); }
+
+    // Prize and banner photography: world-readable, admin-writable.
+    match /competitions/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && request.resource.size < 8 * 1024 * 1024;
+    }
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // Profile photos: owner-writable, 2MB cap.
+    match /users/{uid}/{allPaths=**} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if signedIn() && request.auth.uid == uid
+        && isImage() && request.resource.size < 2 * 1024 * 1024;
+    }
+
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

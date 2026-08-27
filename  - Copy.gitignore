@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+app/google-services.json
+functions/node_modules/
+functions/lib/
+keystore/
+.firebase/
+functions/lib-test/
+*.jks
+*.keystore
