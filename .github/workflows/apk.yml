@@ -37,6 +37,11 @@ jobs:
           fi
 
       - name: Build
+        env:
+          # The publishable key is safe to ship inside the app - it can only
+          # start a payment, never move money. The secret key never comes near
+          # the client and lives in Secret Manager server-side.
+          STRIPE_PUBLISHABLE_KEY_TEST: ${{ secrets.STRIPE_PUBLISHABLE_KEY_TEST }}
         run: |
           set -o pipefail
           gradle assembleStagingDebug --stacktrace 2>&1 | tee build.log
