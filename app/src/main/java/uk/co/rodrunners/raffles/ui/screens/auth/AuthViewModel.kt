@@ -87,6 +87,17 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    /** Called with the ID token that Credential Manager returned. */
+    fun signInWithGoogle(idToken: String, onSuccess: () -> Unit) = submit {
+        auth.signInWithGoogle(idToken)
+        runCatching { accounts.syncPushToken() }
+        onSuccess()
+    }
+
+    fun showError(title: String, message: String) = _form.update {
+        it.copy(error = AppError(title, message, retryable = false), submitting = false)
+    }
+
     fun sendPasswordReset() {
         val f = _form.value
         if (!f.emailValid) {

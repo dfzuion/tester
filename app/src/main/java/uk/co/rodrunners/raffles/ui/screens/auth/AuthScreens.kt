@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.rodrunners.raffles.ui.components.GoldButton
+import uk.co.rodrunners.raffles.ui.components.GoogleSignInButton
 import uk.co.rodrunners.raffles.ui.components.QuietButton
 import uk.co.rodrunners.raffles.ui.components.Wordmark
 import uk.co.rodrunners.raffles.ui.theme.Dimens
@@ -131,6 +132,12 @@ fun LoginScreen(
             enabled = form.canLogIn,
             loading = form.submitting,
             modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        GoogleSignInButton(
+            onIdToken = { token -> viewModel.signInWithGoogle(token, onLoggedIn) },
+            onError = { msg -> viewModel.showError("Google sign-in", msg) },
+            enabled = !form.submitting,
         )
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

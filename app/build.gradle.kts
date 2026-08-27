@@ -85,7 +85,7 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
-            resValue("string", "app_name", "RRR Staging")
+            resValue("string", "app_name", "Rod Runners Raffles")
             // Staging never touches live money, whichever build type it is paired with.
             buildConfigField(
                 "String",
@@ -183,6 +183,9 @@ dependencies {
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
     ksp(libs.hilt.compiler)
 
     implementation(libs.coil.compose)

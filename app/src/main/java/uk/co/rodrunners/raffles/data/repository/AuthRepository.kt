@@ -90,6 +90,29 @@ class AuthRepository @Inject constructor(
         user.sendEmailVerification().await()
     }
 
+    /**
+     * Finishes a Google sign-in. The ID token comes from Credential Manager; a
+     * first-time Google user gets the same one-shot signup document that email
+     * registration writes, so the server-side trigger builds their profile.
+     */
+    suspend fun signInWithGoogle(idToken: String) {
+        val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+        val result = auth.signInWithCredential(credential).await()
+        val user = result.user ?: error("Google sign-in failed. Try again.")
+        if (result.additionalUserInfo?.isNewUser == true) {
+            db.collection(Collections.USER_SIGNUPS).document(user.uid).set(
+                mapOf(
+                    "email" to (user.email ?: ""),
+                    "displayName" to (user.displayName ?: "Angler"),
+                    "ageConfirmed" to true,
+                    "marketingOptIn" to false,
+                    "referredBy" to null,
+                    "provider" to "google",
+                )
+            ).await()
+        }
+    }
+
     suspend fun sendPasswordReset(email: String) {
         auth.sendPasswordResetEmail(email.trim()).await()
     }
