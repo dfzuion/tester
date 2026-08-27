@@ -1,6 +1,8 @@
 package uk.co.rodrunners.raffles.ui.nav
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -48,11 +50,12 @@ fun RrrBottomBar(navController: NavHostController) {
     val entry by navController.currentBackStackEntryAsState()
     val current = entry?.destination
 
-    androidx.compose.foundation.layout.Column {
+    androidx.compose.foundation.layout.Column(Modifier.navigationBarsPadding()) {
         HorizontalDivider(thickness = 1.dp, color = RrrColors.Hairline)
         NavigationBar(
             containerColor = RrrColors.Ink,
             tonalElevation = 0.dp,
+            windowInsets = WindowInsets(0, 0, 0, 0),
             modifier = Modifier.height(72.dp),
         ) {
             bottomTabs.forEach { tab ->
