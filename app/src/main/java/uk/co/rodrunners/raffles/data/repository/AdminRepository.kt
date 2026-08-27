@@ -8,6 +8,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.tasks.await
 import uk.co.rodrunners.raffles.core.Collections
 import uk.co.rodrunners.raffles.core.Functions
+import uk.co.rodrunners.raffles.data.model.AdminUser
 import uk.co.rodrunners.raffles.data.model.Competition
 import uk.co.rodrunners.raffles.data.model.CompetitionDraft
 import uk.co.rodrunners.raffles.data.model.InstantWinClaim
@@ -118,6 +119,42 @@ class AdminRepository @Inject constructor(
     suspend fun deleteDraft(competitionId: String) {
         functions.getHttpsCallable(Functions.DELETE_DRAFT_COMPETITION)
             .call(mapOf("competitionId" to competitionId)).await()
+    }
+
+    // ---- Administrators -----------------------------------------------
+
+    /** One-time: claims Super Admin on a project that has no administrator yet. */
+    suspend fun bootstrapFirstAdmin(key: String): String {
+        val result = functions.getHttpsCallable(Functions.BOOTSTRAP_FIRST_ADMIN)
+            .call(mapOf("key" to key)).await()
+        return ((result.getData() as? Map<*, *>)?.get("message") as? String)
+            ?: "You are now Super Admin."
+    }
+
+    suspend fun adminUsers(): List<AdminUser> {
+        val result = functions.getHttpsCallable(Functions.LIST_ADMIN_USERS).call().await()
+        val rows = (result.getData() as? Map<*, *>)?.get("admins") as? List<*> ?: emptyList<Any>()
+        return rows.mapNotNull { row ->
+            (row as? Map<*, *>)?.let {
+                AdminUser(
+                    uid = it["uid"] as? String ?: return@let null,
+                    email = it["email"] as? String,
+                    displayName = it["displayName"] as? String,
+                    role = it["role"] as? String ?: "support",
+                    active = it["active"] as? Boolean ?: true,
+                )
+            }
+        }
+    }
+
+    suspend fun grantAdmin(email: String, role: String): String {
+        val result = functions.getHttpsCallable(Functions.GRANT_ADMIN)
+            .call(mapOf("email" to email, "role" to role)).await()
+        return ((result.getData() as? Map<*, *>)?.get("message") as? String) ?: "Role granted."
+    }
+
+    suspend fun revokeAdmin(uid: String) {
+        functions.getHttpsCallable(Functions.REVOKE_ADMIN).call(mapOf("uid" to uid)).await()
     }
 
     // ---- Instant wins -------------------------------------------------

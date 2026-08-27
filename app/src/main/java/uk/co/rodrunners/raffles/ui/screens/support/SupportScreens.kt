@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,7 +81,7 @@ fun SupportScreen(
     }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Help and support", style = MaterialTheme.typography.titleLarge) },
@@ -90,7 +91,7 @@ fun SupportScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -208,7 +209,7 @@ fun TicketThreadScreen(
     var draft by remember { mutableStateOf("") }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -225,7 +226,7 @@ fun TicketThreadScreen(
                 },
                 actions = { ticket?.let { StatusPill(it.status); Spacer(Modifier.width(12.dp)) } },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -233,7 +234,7 @@ fun TicketThreadScreen(
         bottomBar = {
             Row(
                 Modifier
-                    .background(RrrColors.Ink)
+                    
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(horizontal = Dimens.gutter, vertical = 8.dp),
@@ -305,7 +306,7 @@ fun FaqScreen(
     var expanded by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             Column {
                 TopAppBar(
@@ -316,7 +317,7 @@ fun FaqScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = RrrColors.Ink,
+                        containerColor = Color.Transparent,
                         titleContentColor = RrrColors.Bone,
                     ),
                 )

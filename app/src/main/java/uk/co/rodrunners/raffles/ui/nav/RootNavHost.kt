@@ -23,6 +23,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PaymentMethodsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
+import uk.co.rodrunners.raffles.ui.screens.admin.AdminUsersScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.InstantWinsScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.ForgotPasswordScreen
@@ -339,7 +340,12 @@ fun RootNavHost(
                 onNewCompetition = { navController.navigate(Routes.ADMIN_NEW_COMPETITION) },
                 onEditCompetition = { navController.navigate(Routes.adminEditCompetition(it)) },
                 onOpenInstantWins = { navController.navigate(Routes.adminInstantWins(it)) },
+                onOpenAdminUsers = { navController.navigate(Routes.ADMIN_USERS) },
             )
+        }
+
+        composable(Routes.ADMIN_USERS) {
+            AdminUsersScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.ADMIN_NEW_COMPETITION) {

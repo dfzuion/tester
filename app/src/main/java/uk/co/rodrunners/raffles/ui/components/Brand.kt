@@ -1,5 +1,6 @@
 package uk.co.rodrunners.raffles.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,10 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import uk.co.rodrunners.raffles.R
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrType
 
@@ -27,6 +31,19 @@ import uk.co.rodrunners.raffles.ui.theme.RrrType
  */
 @Composable
 fun Wordmark(modifier: Modifier = Modifier, compact: Boolean = false) {
+    Image(
+        painter = painterResource(R.drawable.logo_full),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier
+            .height(if (compact) 34.dp else 108.dp)
+            .clearAndSetSemantics { contentDescription = "Rod Runners Raffles" },
+    )
+}
+
+/** Text lockup, for the few places the artwork is too heavy - receipts, rows. */
+@Composable
+fun WordmarkText(modifier: Modifier = Modifier, compact: Boolean = false) {
     Column(
         modifier = modifier.clearAndSetSemantics { contentDescription = "Rod Runners Raffles" },
         horizontalAlignment = Alignment.CenterHorizontally,

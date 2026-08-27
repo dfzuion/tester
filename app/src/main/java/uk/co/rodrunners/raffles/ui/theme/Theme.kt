@@ -2,6 +2,8 @@ package uk.co.rodrunners.raffles.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -90,6 +92,14 @@ fun RodRunnersTheme(content: @Composable () -> Unit) {
         colorScheme = RrrDarkScheme,
         typography = RrrTypography,
         shapes = RrrShapes,
-        content = content,
-    )
+    ) {
+        // One camo wash for the whole app. Screens sit on it transparently, so
+        // the texture runs edge to edge instead of stopping at each surface.
+        Box(
+            Modifier
+                .fillMaxSize()
+                
+                .camoTexture(0.13f)
+        ) { content() }
+    }
 }

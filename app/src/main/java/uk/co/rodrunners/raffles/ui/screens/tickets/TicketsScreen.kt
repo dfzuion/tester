@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,7 +67,7 @@ fun TicketsScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             Column {
                 TopAppBar(
@@ -77,13 +78,13 @@ fun TicketsScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = RrrColors.Ink,
+                        containerColor = Color.Transparent,
                         titleContentColor = RrrColors.Bone,
                     ),
                 )
                 TabRow(
                     selectedTabIndex = TicketState.entries.indexOf(filter),
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     indicator = { positions ->
                         TabRowDefaults.SecondaryIndicator(
                             Modifier.tabIndicatorOffset(positions[TicketState.entries.indexOf(filter)]),

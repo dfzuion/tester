@@ -41,6 +41,10 @@ object Functions {
     const val LIST_INSTANT_WINS = "listInstantWins"
     const val REMOVE_INSTANT_WINS = "removeInstantWinPrizes"
     const val SET_INSTANT_WIN_CLAIM = "setInstantWinClaimStatus"
+    const val BOOTSTRAP_FIRST_ADMIN = "bootstrapFirstAdmin"
+    const val LIST_ADMIN_USERS = "listAdminUsers"
+    const val GRANT_ADMIN = "grantAdminByEmail"
+    const val REVOKE_ADMIN = "revokeAdmin"
 }
 
 object NotificationChannels {

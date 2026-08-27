@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -101,7 +102,7 @@ fun CheckoutScreen(
     }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(state.step.label, style = MaterialTheme.typography.titleLarge) },
@@ -121,7 +122,7 @@ fun CheckoutScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -504,7 +505,7 @@ private fun CheckoutFooter(
 ) {
     Column(
         Modifier
-            .background(RrrColors.Ink)
+            
             .navigationBarsPadding()
             .padding(horizontal = Dimens.gutter, vertical = 12.dp)
     ) {

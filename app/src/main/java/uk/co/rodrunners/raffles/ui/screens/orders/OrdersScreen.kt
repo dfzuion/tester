@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,7 +61,7 @@ fun OrdersScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("My orders", style = MaterialTheme.typography.titleLarge) },
@@ -70,7 +71,7 @@ fun OrdersScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -142,7 +143,7 @@ fun OrderDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Order", style = MaterialTheme.typography.titleLarge) },
@@ -152,7 +153,7 @@ fun OrderDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )

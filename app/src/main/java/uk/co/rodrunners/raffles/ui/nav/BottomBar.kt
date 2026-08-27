@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,7 +32,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import uk.co.rodrunners.raffles.R
 import androidx.compose.foundation.background
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
-import uk.co.rodrunners.raffles.ui.theme.camoTexture
 
 data class TabItem(
     val route: String,
@@ -54,8 +54,7 @@ fun RrrBottomBar(navController: NavHostController) {
 
     androidx.compose.foundation.layout.Column(
         Modifier
-            .background(RrrColors.Ink)
-            .camoTexture(0.16f)
+            .background(RrrColors.Ink.copy(alpha = 0.86f))
             .navigationBarsPadding()
     ) {
         HorizontalDivider(thickness = 1.dp, color = RrrColors.Hairline)

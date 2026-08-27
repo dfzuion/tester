@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,7 +60,7 @@ private fun AuthScaffold(
     content: @Composable () -> Unit,
 ) {
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(title, style = MaterialTheme.typography.titleLarge) },
@@ -69,7 +70,7 @@ private fun AuthScaffold(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -78,7 +79,7 @@ private fun AuthScaffold(
         Column(
             Modifier
                 .fillMaxSize()
-                .background(RrrColors.Ink)
+                
                 .padding(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
@@ -267,7 +268,7 @@ fun VerifyEmailScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(RrrColors.Ink)
+            
             .padding(Dimens.gutter),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +41,7 @@ import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.core.TimeFormat
 import uk.co.rodrunners.raffles.data.model.Competition
 import uk.co.rodrunners.raffles.ui.components.GoldButton
+import uk.co.rodrunners.raffles.ui.components.QuietButton
 import uk.co.rodrunners.raffles.ui.components.OutlineButton
 import uk.co.rodrunners.raffles.ui.components.SectionHeader
 import uk.co.rodrunners.raffles.ui.components.StatusPill
@@ -60,13 +62,14 @@ fun AdminScreen(
     onNewCompetition: () -> Unit = {},
     onEditCompetition: (String) -> Unit = {},
     onOpenInstantWins: (String) -> Unit = {},
+    onOpenAdminUsers: () -> Unit = {},
     viewModel: AdminViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var confirming by remember { mutableStateOf<Pair<String, Competition>?>(null) }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Admin", style = MaterialTheme.typography.titleLarge) },
@@ -76,7 +79,7 @@ fun AdminScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     titleContentColor = RrrColors.Bone,
                 ),
             )
@@ -114,6 +117,10 @@ fun AdminScreen(
             item {
                 Spacer(Modifier.height(8.dp))
                 SectionHeader("Raffles")
+            }
+
+            item {
+                QuietButton("Manage administrators", onClick = onOpenAdminUsers)
             }
 
             item {

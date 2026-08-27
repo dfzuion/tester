@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,7 +79,7 @@ fun CompetitionsScreen(
     }
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             Column {
                 TopAppBar(
@@ -111,13 +112,13 @@ fun CompetitionsScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = RrrColors.Ink,
+                        containerColor = Color.Transparent,
                         titleContentColor = RrrColors.Bone,
                     ),
                 )
                 ScrollableTabRow(
                     selectedTabIndex = CompetitionTab.entries.indexOf(tab),
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     contentColor = RrrColors.Gold,
                     edgePadding = Dimens.gutter,
                     divider = {},

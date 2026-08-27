@@ -39,6 +39,13 @@ export {
   setInstantWinClaimStatus,
 } from "./instantwins";
 
+export {
+  bootstrapFirstAdmin,
+  listAdminUsers,
+  grantAdminByEmail,
+  revokeAdmin,
+} from "./adminusers";
+
 export { notifyEndingSoon } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";

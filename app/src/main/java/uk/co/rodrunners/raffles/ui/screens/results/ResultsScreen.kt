@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,19 +61,19 @@ fun ResultsScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
             Column {
                 TopAppBar(
                     title = { Text("Results", style = MaterialTheme.typography.titleLarge) },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = RrrColors.Ink,
+                        containerColor = Color.Transparent,
                         titleContentColor = RrrColors.Bone,
                     ),
                 )
                 TabRow(
                     selectedTabIndex = ResultsTab.entries.indexOf(tab),
-                    containerColor = RrrColors.Ink,
+                    containerColor = Color.Transparent,
                     divider = {},
                     indicator = { positions ->
                         TabRowDefaults.SecondaryIndicator(

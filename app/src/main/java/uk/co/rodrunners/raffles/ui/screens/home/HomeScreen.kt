@@ -58,7 +58,6 @@ import uk.co.rodrunners.raffles.ui.theme.Dimens
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import uk.co.rodrunners.raffles.ui.theme.RrrType
-import uk.co.rodrunners.raffles.ui.theme.camoTexture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,9 +74,9 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = RrrColors.Ink,
+        containerColor = Color.Transparent,
         topBar = {
-          Box(Modifier.fillMaxWidth().background(RrrColors.Ink).camoTexture(0.18f)) {
+          Box(Modifier.fillMaxWidth().background(RrrColors.Ink.copy(alpha = 0.86f))) {
             TopAppBar(
                 title = { Wordmark(compact = true) },
                 actions = {
