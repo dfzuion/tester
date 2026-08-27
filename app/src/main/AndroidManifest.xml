@@ -62,6 +62,7 @@
             android:name="com.stripe.android.payments.StripeBrowserLauncherActivity"
             android:exported="false"
             android:theme="@style/Theme.RodRunners.Transparent"
-            tools:node="merge" />
+            tools:node="merge"
+            tools:replace="android:theme" />
     </application>
 </manifest>
