@@ -82,7 +82,7 @@ fun SearchScreen(
                         Modifier.padding(horizontal = Dimens.gutter),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        suggestions.forEach { s -> Chip(s, false) { viewModel.setQuery(s) } }
+                        suggestions.forEach { s -> Chip(s, false, onClick = { viewModel.setQuery(s) }) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -96,7 +96,7 @@ fun SearchScreen(
                 verticalArrangement = Arrangement.spacedBy(Dimens.cardGap),
             ) {
                 items(results, key = { it.id }) { competition ->
-                    CompetitionRow(competition) { onOpenCompetition(competition.id) }
+                    CompetitionRow(competition, onClick = { onOpenCompetition(competition.id) })
                 }
             }
         }

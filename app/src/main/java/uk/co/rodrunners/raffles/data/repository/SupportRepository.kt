@@ -54,7 +54,7 @@ class SupportRepository @Inject constructor(
         val result = functions.getHttpsCallable(Functions.CREATE_TICKET).call(
             mapOf("category" to category, "subject" to subject, "message" to message, "orderId" to orderId)
         ).await()
-        return (result.data as Map<*, *>)["ticketId"] as String
+        return (result.getData() as Map<*, *>)["ticketId"] as String
     }
 
     suspend fun reply(ticketDocId: String, message: String) {

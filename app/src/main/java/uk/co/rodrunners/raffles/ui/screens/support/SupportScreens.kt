@@ -148,13 +148,13 @@ fun SupportScreen(
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 SupportCategories.all.take(3).forEach { c ->
-                    Chip(c.label, category == c.key) { category = c.key }
+                    Chip(c.label, category == c.key, onClick = { category = c.key })
                 }
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 SupportCategories.all.drop(3).forEach { c ->
-                    Chip(c.label, category == c.key) { category = c.key }
+                    Chip(c.label, category == c.key, onClick = { category = c.key })
                 }
             }
             Spacer(Modifier.height(16.dp))

@@ -9,8 +9,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
-import coil.request.CachingPolicy
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Scale
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
@@ -34,8 +35,8 @@ fun PrizeImage(
             .data(url)
             .crossfade(if (crossfade) 220 else 0)
             .scale(Scale.FILL)
-            .memoryCachePolicy(CachingPolicy.ENABLED)
-            .diskCachePolicy(CachingPolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
             .build(),
         contentDescription = contentDescription,
         contentScale = contentScale,

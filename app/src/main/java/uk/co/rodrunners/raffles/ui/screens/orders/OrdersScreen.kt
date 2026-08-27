@@ -207,7 +207,7 @@ fun OrderDetailScreen(
                 }
 
                 Spacer(Modifier.height(32.dp))
-                QuietButton("Problem with this order?") { onOpenSupport(order.id) }
+                QuietButton("Problem with this order?", onClick = { onOpenSupport(order.id) })
                 Spacer(Modifier.height(40.dp))
             }
         }

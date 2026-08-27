@@ -86,6 +86,6 @@ class AccountRepository @Inject constructor(
 
     suspend fun deleteAccount(): Int {
         val result = functions.getHttpsCallable(Functions.DELETE_ACCOUNT).call().await()
-        return ((result.data as Map<*, *>)["openEntriesRetained"] as? Number)?.toInt() ?: 0
+        return ((result.getData() as Map<*, *>)["openEntriesRetained"] as? Number)?.toInt() ?: 0
     }
 }

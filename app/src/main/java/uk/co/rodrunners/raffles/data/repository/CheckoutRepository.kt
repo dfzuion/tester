@@ -28,7 +28,7 @@ class CheckoutRepository @Inject constructor(
         val result = functions.getHttpsCallable(Functions.QUOTE_BASKET)
             .call(mapOf("competitionId" to competitionId, "quantity" to quantity, "promoCode" to promoCode))
             .await()
-        return parseBreakdown(result.data as Map<*, *>)
+        return parseBreakdown(result.getData() as Map<*, *>)
     }
 
     /**
@@ -51,7 +51,7 @@ class CheckoutRepository @Inject constructor(
                     "idempotencyKey" to idempotencyKey,
                 )
             ).await()
-        val map = result.data as Map<*, *>
+        val map = result.getData() as Map<*, *>
         return CreatedOrder(
             orderId = map["orderId"] as String,
             orderNumber = map["orderNumber"] as? String ?: "",
@@ -64,7 +64,7 @@ class CheckoutRepository @Inject constructor(
         val result = functions.getHttpsCallable(Functions.APPLY_PROMO)
             .call(mapOf("code" to code, "competitionId" to competitionId, "subtotalPence" to subtotalPence))
             .await()
-        return ((result.data as Map<*, *>)["discountPence"] as Number).toInt()
+        return ((result.getData() as Map<*, *>)["discountPence"] as Number).toInt()
     }
 
     private fun parseBreakdown(m: Map<*, *>) = PriceBreakdown(

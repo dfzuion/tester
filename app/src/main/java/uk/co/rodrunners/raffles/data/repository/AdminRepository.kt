@@ -79,7 +79,7 @@ class AdminRepository @Inject constructor(
     suspend fun draw(competitionId: String, publishImmediately: Boolean): DrawOutcome {
         val result = functions.getHttpsCallable(Functions.DRAW_WINNER)
             .call(mapOf("competitionId" to competitionId, "publishImmediately" to publishImmediately)).await()
-        val m = result.data as Map<*, *>
+        val m = result.getData() as Map<*, *>
         return DrawOutcome(
             winningEntryNumber = (m["winningEntryNumber"] as Number).toInt(),
             eligibleEntryCount = (m["eligibleEntryCount"] as Number).toInt(),

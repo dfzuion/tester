@@ -488,7 +488,7 @@ private fun CompleteStep(
     Spacer(Modifier.height(24.dp))
     GoldButton("View my tickets", onOpenTickets, Modifier.fillMaxWidth())
     Spacer(Modifier.height(8.dp))
-    QuietButton("See order details") { onOpenOrder(order.id) }
+    QuietButton("See order details", onClick = { onOpenOrder(order.id) })
 }
 
 @Composable

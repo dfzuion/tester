@@ -167,9 +167,9 @@ fun AccountScreen(
                     listOfNotNull(
                         AccountAction("Help and support", Icons.AutoMirrored.Outlined.HelpOutline, onOpenSupport),
                         AccountAction("FAQs", Icons.Outlined.Description, onOpenFaq),
-                        AccountAction("Terms and conditions", Icons.Outlined.Description) { onOpenLegal("terms") },
-                        AccountAction("Privacy policy", Icons.Outlined.PrivacyTip) { onOpenLegal("privacy") },
-                        AccountAction("Company information", Icons.Outlined.Description) { onOpenLegal("company") },
+                        AccountAction("Terms and conditions", Icons.Outlined.Description, onClick = { onOpenLegal("terms") }),
+                        AccountAction("Privacy policy", Icons.Outlined.PrivacyTip, onClick = { onOpenLegal("privacy") }),
+                        AccountAction("Company information", Icons.Outlined.Description, onClick = { onOpenLegal("company") }),
                         if (state.isAdmin) AccountAction("Admin", Icons.Outlined.AdminPanelSettings, onOpenAdmin) else null,
                     )
                 )
@@ -177,10 +177,10 @@ fun AccountScreen(
                 Spacer(Modifier.height(24.dp))
                 AccountGroup(
                     listOf(
-                        AccountAction("Log out", Icons.AutoMirrored.Outlined.Logout) {
+                        AccountAction("Log out", Icons.AutoMirrored.Outlined.Logout, onClick = {
                             viewModel.signOut()
                             onSignedOut()
-                        }
+                        })
                     )
                 )
 

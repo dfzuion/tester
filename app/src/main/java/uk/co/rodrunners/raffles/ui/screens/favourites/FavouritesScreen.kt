@@ -121,7 +121,7 @@ fun FavouritesScreen(
                 verticalArrangement = Arrangement.spacedBy(Dimens.cardGap),
             ) {
                 items(list, key = { it.id }) { c ->
-                    CompetitionRow(c) { onOpenCompetition(c.id) }
+                    CompetitionRow(c, onClick = { onOpenCompetition(c.id) })
                 }
             }
         }
