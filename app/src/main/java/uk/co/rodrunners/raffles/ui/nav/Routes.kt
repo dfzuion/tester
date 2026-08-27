@@ -25,6 +25,9 @@ object Routes {
     const val SUPPORT = "support"
     const val FAQ = "faq"
     const val ADMIN = "admin"
+    const val ADMIN_NEW_COMPETITION = "admin/competition/new"
+    const val ADMIN_EDIT_COMPETITION = "admin/competition/{competitionId}"
+    fun adminEditCompetition(id: String) = "admin/competition/$id"
 
     const val COMPETITION_DETAIL = "competition/{competitionId}"
     fun competitionDetail(id: String) = "competition/$id"

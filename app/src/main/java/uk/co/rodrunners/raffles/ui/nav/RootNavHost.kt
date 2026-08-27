@@ -23,6 +23,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PaymentMethodsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
+import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.ForgotPasswordScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.LoginScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.RegisterScreen
@@ -334,6 +335,24 @@ fun RootNavHost(
             AdminScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCompetition = { navController.navigate(Routes.competitionDetail(it)) },
+                onNewCompetition = { navController.navigate(Routes.ADMIN_NEW_COMPETITION) },
+                onEditCompetition = { navController.navigate(Routes.adminEditCompetition(it)) },
+            )
+        }
+
+        composable(Routes.ADMIN_NEW_COMPETITION) {
+            CompetitionEditorScreen(
+                competitionId = null,
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.ADMIN_EDIT_COMPETITION) { entry ->
+            CompetitionEditorScreen(
+                competitionId = entry.arguments?.getString("competitionId"),
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
             )
         }
     }

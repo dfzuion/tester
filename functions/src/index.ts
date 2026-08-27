@@ -26,6 +26,12 @@ export {
   registerFcmToken,
 } from "./admin";
 
+export {
+  createCompetition,
+  updateCompetition,
+  deleteDraftCompetition,
+} from "./competitions";
+
 export { notifyEndingSoon } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";

@@ -33,6 +33,9 @@ object Functions {
     const val REFUND_ORDER = "refundOrder"
     const val SUSPEND_CUSTOMER = "suspendCustomer"
     const val SEED_DEMO = "seedDemoData"
+    const val CREATE_COMPETITION = "createCompetition"
+    const val UPDATE_COMPETITION = "updateCompetition"
+    const val DELETE_DRAFT_COMPETITION = "deleteDraftCompetition"
 }
 
 object NotificationChannels {

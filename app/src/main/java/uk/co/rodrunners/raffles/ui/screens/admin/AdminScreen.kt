@@ -57,6 +57,8 @@ import uk.co.rodrunners.raffles.ui.theme.RrrType
 fun AdminScreen(
     onBack: () -> Unit,
     onOpenCompetition: (String) -> Unit,
+    onNewCompetition: () -> Unit = {},
+    onEditCompetition: (String) -> Unit = {},
     viewModel: AdminViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -113,11 +115,20 @@ fun AdminScreen(
                 SectionHeader("Raffles")
             }
 
+            item {
+                GoldButton(
+                    text = "New raffle",
+                    onClick = onNewCompetition,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             items(state.competitions, key = { it.id }) { competition ->
                 AdminCompetitionCard(
                     competition = competition,
                     busy = state.busyCompetitionId == competition.id,
                     onOpen = { onOpenCompetition(competition.id) },
+                    onEdit = { onEditCompetition(competition.id) },
                     onAction = { action -> confirming = action to competition },
                 )
             }
@@ -237,6 +248,7 @@ private fun AdminCompetitionCard(
     competition: Competition,
     busy: Boolean,
     onOpen: () -> Unit,
+    onEdit: () -> Unit = {},
     onAction: (String) -> Unit,
 ) {
     Column(
@@ -280,6 +292,7 @@ private fun AdminCompetitionCard(
                 "drawn" -> GoldButton("Publish result", { onAction("publish_result") }, enabled = !busy)
                 else -> Unit
             }
+            OutlineButton("Edit", onEdit, enabled = !busy)
             OutlineButton("View", onOpen, enabled = !busy)
         }
     }

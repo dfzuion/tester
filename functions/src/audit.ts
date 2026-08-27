@@ -4,7 +4,7 @@ import { Collections } from "./config";
 export type AuditAction =
   | "competition.created" | "competition.updated" | "competition.published"
   | "competition.unpublished" | "competition.paused" | "competition.closed"
-  | "competition.cancelled" | "order.created" | "payment.confirmed"
+  | "competition.cancelled" | "competition.deleted" | "order.created" | "payment.confirmed"
   | "payment.failed" | "entries.allocated" | "refund.processed"
   | "winner.selected" | "result.published" | "account.suspended"
   | "admin.role.changed" | "content.updated" | "promotion.created";

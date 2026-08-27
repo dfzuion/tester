@@ -97,6 +97,26 @@ class AdminRepository @Inject constructor(
             .call(mapOf("orderId" to orderId, "amountPence" to amountPence, "reason" to reason)).await()
     }
 
+    /**
+     * Creates a draft raffle. Everything is validated again server-side; this
+     * only shapes the payload.
+     */
+    suspend fun createCompetition(draft: CompetitionDraft): String {
+        val result = functions.getHttpsCallable(Functions.CREATE_COMPETITION)
+            .call(draft.toPayload()).await()
+        return ((result.getData() as Map<*, *>)["competitionId"] as? String).orEmpty()
+    }
+
+    suspend fun updateCompetition(competitionId: String, draft: CompetitionDraft) {
+        functions.getHttpsCallable(Functions.UPDATE_COMPETITION)
+            .call(draft.toPayload() + mapOf("competitionId" to competitionId)).await()
+    }
+
+    suspend fun deleteDraft(competitionId: String) {
+        functions.getHttpsCallable(Functions.DELETE_DRAFT_COMPETITION)
+            .call(mapOf("competitionId" to competitionId)).await()
+    }
+
     suspend fun seedDemoData() {
         functions.getHttpsCallable(Functions.SEED_DEMO).call().await()
     }
