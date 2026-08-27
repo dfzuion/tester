@@ -48,6 +48,26 @@ jobs:
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
+      # A function that declares a secret refuses to deploy until that secret
+      # exists, and the CLI stops to ask for it - which nothing can answer in
+      # CI. Create any that are missing with an obvious placeholder so the
+      # deploy completes; real values go in through Secret Manager later.
+      - name: Ensure the declared secrets exist
+        env:
+          PROJECT: rod-runners-raffles
+        run: |
+          for NAME in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET SENDGRID_API_KEY ADMIN_BOOTSTRAP_KEY; do
+            if firebase functions:secrets:access "$NAME" --project "$PROJECT" >/dev/null 2>&1; then
+              echo "$NAME already set"
+            else
+              echo "creating placeholder for $NAME"
+              printf 'PLACEHOLDER_REPLACE_ME' > /tmp/secret.txt
+              firebase functions:secrets:set "$NAME" \
+                --project "$PROJECT" --data-file /tmp/secret.txt --force
+              rm -f /tmp/secret.txt
+            fi
+          done
+
       - name: Deploy
         env:
           RRR_ENFORCE_APP_CHECK: ${{ inputs.enforceAppCheck }}
