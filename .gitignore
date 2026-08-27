@@ -14,3 +14,4 @@ keystore/
 functions/lib-test/
 *.jks
 *.keystore
+/google-services.json
