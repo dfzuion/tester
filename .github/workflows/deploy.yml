@@ -48,25 +48,36 @@ jobs:
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
-      # A function that declares a secret refuses to deploy until that secret
-      # exists, and the CLI stops to ask for it - which nothing can answer in
-      # CI. Create any that are missing with an obvious placeholder so the
-      # deploy completes; real values go in through Secret Manager later.
-      - name: Ensure the declared secrets exist
+      # Firebase asks for every declared parameter at deploy time. Plain
+      # config values come from a dotenv file; secrets must already exist in
+      # Secret Manager. Anything missing gets an obvious placeholder so the
+      # deploy completes - real values are set afterwards and survive, because
+      # existing secrets are never overwritten.
+      - name: Ensure parameters and secrets exist
         env:
           PROJECT: rod-runners-raffles
         run: |
+          set -x
+          cat > functions/.env."$PROJECT" <<'ENVEOF'
+          SUPPORT_EMAIL=support@rodrunnersraffles.co.uk
+          FROM_EMAIL=no-reply@rodrunnersraffles.co.uk
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' functions/.env."$PROJECT"
+          cat functions/.env."$PROJECT"
+
           for NAME in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET SENDGRID_API_KEY ADMIN_BOOTSTRAP_KEY; do
             if firebase functions:secrets:access "$NAME" --project "$PROJECT" >/dev/null 2>&1; then
-              echo "$NAME already set"
+              echo "secret $NAME already exists - leaving it alone"
             else
-              echo "creating placeholder for $NAME"
+              echo "creating placeholder secret $NAME"
               printf 'PLACEHOLDER_REPLACE_ME' > /tmp/secret.txt
-              firebase functions:secrets:set "$NAME" \
-                --project "$PROJECT" --data-file /tmp/secret.txt --force
+              firebase functions:secrets:set "$NAME" --project "$PROJECT" \
+                --data-file /tmp/secret.txt --non-interactive
               rm -f /tmp/secret.txt
             fi
           done
+          echo "--- secrets now present ---"
+          firebase functions:secrets:get --project "$PROJECT" || true
 
       - name: Deploy
         env:
@@ -86,7 +97,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/logs && cp deploy.log /tmp/logs/deploy.log 2>/dev/null || echo "no log produced" > /tmp/logs/deploy.log
+          mkdir -p /tmp/logs
+          cp deploy.log /tmp/logs/deploy.log 2>/dev/null || echo "the deploy step never ran - the failure was earlier" > /tmp/logs/deploy.log
           cd /tmp/logs
           git init -q -b ci-logs
           git config user.email "ci@example.com"
