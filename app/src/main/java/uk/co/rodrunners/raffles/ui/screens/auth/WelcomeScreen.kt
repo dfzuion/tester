@@ -24,6 +24,7 @@ import uk.co.rodrunners.raffles.ui.components.PrizeImage
 import uk.co.rodrunners.raffles.ui.components.Wordmark
 import uk.co.rodrunners.raffles.ui.theme.Dimens
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
+import uk.co.rodrunners.raffles.ui.theme.camoTexture
 
 /**
  * The welcome screen is the one place the brand gets the whole screen: a single
@@ -50,6 +51,7 @@ fun WelcomeScreen(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .camoTexture(0.14f)
                 .navigationBarsPadding()
                 .padding(horizontal = Dimens.gutter, vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

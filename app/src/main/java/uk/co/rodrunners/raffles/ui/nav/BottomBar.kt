@@ -29,7 +29,9 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import uk.co.rodrunners.raffles.R
+import androidx.compose.foundation.background
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
+import uk.co.rodrunners.raffles.ui.theme.camoTexture
 
 data class TabItem(
     val route: String,
@@ -50,10 +52,15 @@ fun RrrBottomBar(navController: NavHostController) {
     val entry by navController.currentBackStackEntryAsState()
     val current = entry?.destination
 
-    androidx.compose.foundation.layout.Column(Modifier.navigationBarsPadding()) {
+    androidx.compose.foundation.layout.Column(
+        Modifier
+            .background(RrrColors.Ink)
+            .camoTexture(0.16f)
+            .navigationBarsPadding()
+    ) {
         HorizontalDivider(thickness = 1.dp, color = RrrColors.Hairline)
         NavigationBar(
-            containerColor = RrrColors.Ink,
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             tonalElevation = 0.dp,
             windowInsets = WindowInsets(0, 0, 0, 0),
             modifier = Modifier.height(72.dp),

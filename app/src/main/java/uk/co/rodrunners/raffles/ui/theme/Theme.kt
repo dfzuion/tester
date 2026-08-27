@@ -1,13 +1,21 @@
 package uk.co.rodrunners.raffles.ui.theme
 
 import android.app.Activity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.res.imageResource
+import uk.co.rodrunners.raffles.R
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -50,6 +58,20 @@ object Dimens {
     val sectionGap = 28.dp
     val minTouchTarget = 48.dp
     val cardRadius = 14.dp
+}
+
+/**
+ * The digital camo wash. Kept faint on purpose: it should read as fabric under
+ * the content, never as a pattern competing with the photography. One tile is
+ * shared by every caller, repeated by the shader rather than redrawn.
+ */
+@Composable
+fun Modifier.camoTexture(alpha: Float = 0.10f): Modifier {
+    val tile = androidx.compose.ui.graphics.ImageBitmap.imageResource(R.drawable.camo_tile)
+    val brush = remember(tile) {
+        ShaderBrush(ImageShader(tile, TileMode.Repeated, TileMode.Repeated))
+    }
+    return this.background(brush, alpha = alpha)
 }
 
 @Composable

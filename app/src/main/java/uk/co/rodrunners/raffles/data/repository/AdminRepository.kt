@@ -9,6 +9,7 @@ import kotlinx.coroutines.tasks.await
 import uk.co.rodrunners.raffles.core.Collections
 import uk.co.rodrunners.raffles.core.Functions
 import uk.co.rodrunners.raffles.data.model.Competition
+import uk.co.rodrunners.raffles.data.model.CompetitionDraft
 import uk.co.rodrunners.raffles.data.model.InstantWinClaim
 import uk.co.rodrunners.raffles.data.model.InstantWinStock
 import uk.co.rodrunners.raffles.data.model.Order

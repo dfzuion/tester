@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +58,7 @@ import uk.co.rodrunners.raffles.ui.theme.Dimens
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import uk.co.rodrunners.raffles.ui.theme.RrrType
+import uk.co.rodrunners.raffles.ui.theme.camoTexture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +77,7 @@ fun HomeScreen(
     Scaffold(
         containerColor = RrrColors.Ink,
         topBar = {
+          Box(Modifier.fillMaxWidth().background(RrrColors.Ink).camoTexture(0.18f)) {
             TopAppBar(
                 title = { Wordmark(compact = true) },
                 actions = {
@@ -97,8 +100,9 @@ fun HomeScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = RrrColors.Ink),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
+          }
         },
     ) { padding ->
         StateHost(
