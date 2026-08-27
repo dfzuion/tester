@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
 import { pushToUser, createUserNotification } from "./notifications";
@@ -73,7 +73,7 @@ function pickFreeNumbers(count: number, maxEntries: number, taken: Set<number>):
   return chosen;
 }
 
-export const addInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const addInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { competitionId } = req.data ?? {};
   if (!competitionId) throw new HttpsError("invalid-argument", "Which raffle?");
@@ -150,7 +150,7 @@ export const addInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: tru
 });
 
 /** Admin view. Unclaimed prizes are summarised, never enumerated with numbers. */
-export const listInstantWins = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const listInstantWins = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   await requireAdmin(req, "competitions.write");
   const { competitionId } = req.data ?? {};
   if (!competitionId) throw new HttpsError("invalid-argument", "Which raffle?");
@@ -183,7 +183,7 @@ export const listInstantWins = onCall({ region: REGION, enforceAppCheck: true },
 });
 
 /** Removing is only ever allowed while a prize is still unclaimed. */
-export const removeInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const removeInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { competitionId, prizeName, count } = req.data ?? {};
   if (!competitionId || !prizeName) throw new HttpsError("invalid-argument", "Which prize?");
@@ -215,7 +215,7 @@ export const removeInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: 
 });
 
 /** Marks a won prize as dispatched or fulfilled, for the claims list. */
-export const setInstantWinClaimStatus = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const setInstantWinClaimStatus = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { instantWinId, claimStatus, note } = req.data ?? {};
   const allowed = ["pending", "contacted", "dispatched", "fulfilled"];

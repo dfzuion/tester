@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin, requireAuth, AdminRole, RolePermissions } from "./guards";
 import { writeAudit } from "./audit";
 import { queueEmail, pushToTopic } from "./notifications";
@@ -50,7 +50,7 @@ function generateReferralCode(): string {
 }
 
 /** Only a Super Admin can hand out roles, and every change is logged. */
-export const setAdminRole = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const setAdminRole = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "*");
   if (ctx.role !== "super_admin") throw new HttpsError("permission-denied", "Only a Super Admin can change roles.");
 
@@ -77,7 +77,7 @@ export const setAdminRole = onCall({ region: REGION, enforceAppCheck: true }, as
   return { ok: true };
 });
 
-export const suspendCustomer = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const suspendCustomer = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "customers.suspend");
   const { userId, suspended, reason } = req.data ?? {};
   const db = admin.firestore();
@@ -95,7 +95,7 @@ export const suspendCustomer = onCall({ region: REGION, enforceAppCheck: true },
 });
 
 /** Publishing a raffle is a server action so status transitions stay legal. */
-export const setCompetitionStatus = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const setCompetitionStatus = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { competitionId, status } = req.data ?? {};
   const allowed = ["draft", "scheduled", "live", "paused", "cancelled"];
@@ -130,7 +130,7 @@ export const setCompetitionStatus = onCall({ region: REGION, enforceAppCheck: tr
 });
 
 /** Account deletion: anonymises the customer but preserves the entry ledger. */
-export const deleteMyAccount = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const deleteMyAccount = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const uid = requireAuth(req);
   const db = admin.firestore();
 

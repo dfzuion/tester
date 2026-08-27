@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import Stripe from "stripe";
-import { Collections, REGION, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } from "./config";
+import { Collections, REGION, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ENFORCE_APP_CHECK } from "./config";
 import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
 import { awardInstantWins } from "./instantwins";
 import { computePrice, validatePromotion } from "./pricing";
@@ -21,7 +21,7 @@ function stripe(): Stripe {
 const RESERVATION_TTL_MS = 15 * 60 * 1000;
 
 /** Step 1 of checkout: price the basket. Read-only, no numbers reserved yet. */
-export const quoteBasket = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const quoteBasket = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const uid = requireAuth(req);
   const { competitionId, quantity, promoCode } = req.data ?? {};
   const { breakdown } = await computePrice({ competitionId, quantity: Number(quantity), promoCode, userId: uid });
@@ -34,7 +34,7 @@ export const quoteBasket = onCall({ region: REGION, enforceAppCheck: true }, asy
  * until Stripe tells us - over its own webhook - that the money cleared.
  */
 export const createOrderAndPaymentIntent = onCall(
-  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: true },
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
   async (req: CallableRequest) => {
     const uid = requireAuth(req);
     await assertNotRateLimited(`checkout:${uid}`, 10, 60_000);
@@ -319,7 +319,7 @@ async function handleRefund(charge: Stripe.Charge) {
 
 /** Admin-initiated refund. Stripe is the source of truth; the webhook finishes the job. */
 export const refundOrder = onCall(
-  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: true },
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
   async (req: CallableRequest) => {
     const admin_ = await requireAdmin(req, "orders.refund");
     const { orderId, amountPence, reason } = req.data ?? {};
@@ -389,7 +389,7 @@ async function recordRedemption(code: string, userId: string, orderId: string) {
   await snap.docs[0].ref.update({ usageCount: admin.firestore.FieldValue.increment(1) });
 }
 
-export const applyPromoCode = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const applyPromoCode = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const uid = requireAuth(req);
   const { code, competitionId, subtotalPence } = req.data ?? {};
   return validatePromotion(String(code), String(competitionId), uid, Number(subtotalPence));

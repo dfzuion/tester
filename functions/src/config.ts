@@ -14,6 +14,16 @@ export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@r
 export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunnersraffles.co.uk" });
 export const REGION = "europe-west2"; // London
 
+/**
+ * App Check proves a call came from the real app rather than a script. Release
+ * builds get a token from Play Integrity; a debug build needs a debug token
+ * registered by hand, which isn't practical while testing from CI.
+ *
+ * Deploy with RRR_ENFORCE_APP_CHECK=false to relax it, and leave it unset (the
+ * default) for production. Auth and Firestore rules are unaffected either way.
+ */
+export const ENFORCE_APP_CHECK = process.env.RRR_ENFORCE_APP_CHECK !== "false";
+
 export const Collections = {
   users: "users",
   competitions: "competitions",

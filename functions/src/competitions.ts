@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
 
@@ -123,7 +123,7 @@ function buildPayload(data: any, partial: boolean): Record<string, unknown> {
   return out;
 }
 
-export const createCompetition = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const createCompetition = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const payload = buildPayload(req.data ?? {}, false);
 
@@ -153,7 +153,7 @@ export const createCompetition = onCall({ region: REGION, enforceAppCheck: true 
   return { competitionId: ref.id };
 });
 
-export const updateCompetition = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const updateCompetition = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { competitionId } = req.data ?? {};
   if (!competitionId) throw new HttpsError("invalid-argument", "Which raffle?");
@@ -194,7 +194,7 @@ export const updateCompetition = onCall({ region: REGION, enforceAppCheck: true 
 });
 
 /** Only ever allowed for a draft nobody has entered. */
-export const deleteDraftCompetition = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const deleteDraftCompetition = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
   const { competitionId } = req.data ?? {};
   const db = admin.firestore();

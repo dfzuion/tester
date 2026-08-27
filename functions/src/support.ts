@@ -1,12 +1,12 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAuth, requireAdmin, assertNotRateLimited } from "./guards";
 import { createUserNotification, pushToUser, queueEmail } from "./notifications";
 
 const CATEGORIES = ["order", "payment", "competition", "account", "report_problem", "other"];
 
-export const createSupportTicket = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const createSupportTicket = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const uid = requireAuth(req);
   await assertNotRateLimited(`support:${uid}`, 5, 3600_000);
 
@@ -35,7 +35,7 @@ export const createSupportTicket = onCall({ region: REGION, enforceAppCheck: tru
   return { id: ref.id, ticketId };
 });
 
-export const replyToTicket = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const replyToTicket = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const { ticketDocId, message, closeTicket } = req.data ?? {};
   const db = admin.firestore();
   const ref = db.collection(Collections.supportTickets).doc(ticketDocId);

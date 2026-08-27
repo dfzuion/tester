@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { AdminRole, RolePermissions, requireAdmin, requireAuth } from "./guards";
 import { writeAudit } from "./audit";
 
@@ -58,7 +58,7 @@ export const bootstrapFirstAdmin = onCall(
 );
 
 /** Everyone with a role, for the admin management screen. */
-export const listAdminUsers = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const listAdminUsers = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   await requireAdmin(req, "*");
   const snap = await admin.firestore().collection(Collections.adminUsers).get();
   return {
@@ -80,7 +80,7 @@ export const listAdminUsers = onCall({ region: REGION, enforceAppCheck: true }, 
  * The person must already have signed up - we promote an account, never create
  * one, and an admin account with no password of its own is one fewer way in.
  */
-export const grantAdminByEmail = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const grantAdminByEmail = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "*");
   if (ctx.role !== "super_admin") throw new HttpsError("permission-denied", "Only a Super Admin can change roles.");
 
@@ -120,7 +120,7 @@ export const grantAdminByEmail = onCall({ region: REGION, enforceAppCheck: true 
 });
 
 /** Revokes admin rights. The customer account itself is untouched. */
-export const revokeAdmin = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const revokeAdmin = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "*");
   if (ctx.role !== "super_admin") throw new HttpsError("permission-denied", "Only a Super Admin can change roles.");
   const targetUid = String(req.data?.uid ?? "");

@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { Collections, REGION } from "./config";
+import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
 import { queueEmail, pushToUser, createUserNotification, pushToTopic } from "./notifications";
@@ -21,7 +21,7 @@ import { queueEmail, pushToUser, createUserNotification, pushToTopic } from "./n
  * No customer-writable path can influence any of it.
  */
 
-export const closeCompetition = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const closeCompetition = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.close");
   const { competitionId, reason } = req.data ?? {};
   const db = admin.firestore();
@@ -51,7 +51,7 @@ export const closeCompetition = onCall({ region: REGION, enforceAppCheck: true }
   return { ok: true };
 });
 
-export const drawWinner = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const drawWinner = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.draw");
   const { competitionId, publishImmediately } = req.data ?? {};
   const db = admin.firestore();
@@ -150,7 +150,7 @@ export const drawWinner = onCall({ region: REGION, enforceAppCheck: true }, asyn
   return { drawId: drawRef.id, winnerId: winnerRef.id, winningEntryNumber: winner.entryNumber, eligibleEntryCount: eligible.length, seedHash };
 });
 
-export const publishResult = onCall({ region: REGION, enforceAppCheck: true }, async (req: CallableRequest) => {
+export const publishResult = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.draw");
   await publishResultInternal(req.data.competitionId, ctx.uid);
   return { ok: true };
