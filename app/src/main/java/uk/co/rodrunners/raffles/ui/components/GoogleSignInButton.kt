@@ -16,7 +16,6 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
-import uk.co.rodrunners.raffles.R
 
 /**
  * "Continue with Google" using Credential Manager. The web client id comes from
@@ -43,9 +42,21 @@ fun GoogleSignInButton(
             busy = true
             scope.launch {
                 try {
+                    // google-services.json only carries a web client id once the
+                    // Google provider is enabled in the Firebase console, so the
+                    // resource may genuinely not exist. Look it up by name rather
+                    // than by R reference, and fail with something a human can act on.
+                    val resId = context.resources.getIdentifier(
+                        "default_web_client_id", "string", context.packageName,
+                    )
+                    if (resId == 0) {
+                        onError("Google sign-in isn't set up for this build yet.")
+                        busy = false
+                        return@launch
+                    }
                     val option = GetGoogleIdOption.Builder()
                         .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(context.getString(R.string.default_web_client_id))
+                        .setServerClientId(context.getString(resId))
                         .setAutoSelectEnabled(false)
                         .build()
                     val response = manager.getCredential(
