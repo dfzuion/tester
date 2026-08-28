@@ -53,6 +53,10 @@ import uk.co.rodrunners.raffles.ui.components.GoldRule
 import uk.co.rodrunners.raffles.ui.components.PrizeImage
 import uk.co.rodrunners.raffles.ui.components.SectionHeader
 import uk.co.rodrunners.raffles.ui.theme.Dimens
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.ExperimentalFoundationApi
+import uk.co.rodrunners.raffles.BuildConfig
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrType
 
@@ -63,9 +67,10 @@ data class AccountAction(
     val trailing: String? = null,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AccountScreen(
+    onOpenAdminUsers: () -> Unit = {},
     onOpenTickets: () -> Unit,
     onOpenOrders: () -> Unit,
     onOpenWins: () -> Unit,
@@ -193,6 +198,26 @@ fun AccountScreen(
                         Text(code, style = RrrType.Numeric, color = RrrColors.Gold)
                     }
                 }
+                // The very first administrator has to get in somehow, and the
+                // Admin entry above only appears once you already are one.
+                // Long-pressing the version line opens the Administrators screen,
+                // which is itself useless without the setup key from Secret
+                // Manager - so this reveals nothing to a curious customer.
+                Spacer(Modifier.height(28.dp))
+                Text(
+                    "Version ${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = RrrColors.Slate,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.gutter)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = onOpenAdminUsers,
+                        ),
+                    textAlign = TextAlign.Center,
+                )
+
                 Spacer(Modifier.height(40.dp))
             }
         }

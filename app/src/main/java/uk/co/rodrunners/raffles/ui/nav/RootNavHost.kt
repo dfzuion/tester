@@ -181,6 +181,7 @@ fun RootNavHost(
 
         composable(Routes.ACCOUNT) {
             AccountScreen(
+                onOpenAdminUsers = { navController.navigate(Routes.ADMIN_USERS) },
                 onOpenTickets = { navController.navigate(Routes.TICKETS) },
                 onOpenOrders = { navController.navigate(Routes.ORDERS) },
                 onOpenWins = { navController.navigate(Routes.RESULTS) },
