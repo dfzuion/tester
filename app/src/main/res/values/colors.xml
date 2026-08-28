@@ -1,5 +1,6 @@
 <resources>
-    <color name="brand_gold">#B0702F</color>
-    <color name="brand_ink">#0A0A09</color>
-    <color name="brand_surface">#17150F</color>
+    <color name="brand_gold">#A96A2C</color>
+    <color name="brand_khaki">#8FA84E</color>
+    <color name="brand_ink">#090B07</color>
+    <color name="brand_surface">#14180F</color>
 </resources>

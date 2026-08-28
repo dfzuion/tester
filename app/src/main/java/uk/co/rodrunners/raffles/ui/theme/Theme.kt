@@ -23,16 +23,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 /**
- * Dark by design rather than by system preference: the photography and the gold
- * accent are built for a near-black canvas.
+ * Dark by design rather than by system preference: the photography, the camo
+ * and the khaki accent are all built for a near-black canvas.
  */
 private val RrrDarkScheme = darkColorScheme(
-    primary = RrrColors.Gold,
+    primary = RrrColors.Khaki,
     onPrimary = RrrColors.Ink,
-    primaryContainer = RrrColors.GoldDim,
-    onPrimaryContainer = RrrColors.GoldBright,
-    secondary = RrrColors.Bone,
+    primaryContainer = RrrColors.KhakiDim,
+    onPrimaryContainer = RrrColors.KhakiBright,
+    secondary = RrrColors.Gold,
     onSecondary = RrrColors.Ink,
+    secondaryContainer = RrrColors.GoldDim,
+    onSecondaryContainer = RrrColors.GoldBright,
+    tertiary = RrrColors.Bone,
+    onTertiary = RrrColors.Ink,
     background = RrrColors.Ink,
     onBackground = RrrColors.Bone,
     surface = RrrColors.Surface,
@@ -98,8 +102,8 @@ fun RodRunnersTheme(content: @Composable () -> Unit) {
         Box(
             Modifier
                 .fillMaxSize()
-                
-                .camoTexture(0.30f)
+                .background(RrrColors.Ink)
+                .camoTexture(0.60f)
         ) { content() }
     }
 }

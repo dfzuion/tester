@@ -130,7 +130,7 @@ class MainActivity : ComponentActivity() {
                     val showBottomBar = bottomTabs.any { it.route == entry?.destination?.route }
 
                     Scaffold(
-                        containerColor = RrrColors.Ink,
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
                         bottomBar = { if (showBottomBar) RrrBottomBar(nav) },
                     ) { padding ->
                         RootNavHost(
