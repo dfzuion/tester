@@ -12,8 +12,8 @@ export const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
 /** Either provider works; whichever key is set is the one used. */
 export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 
-export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@rodrunnersraffles.co.uk" });
-export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunnersraffles.co.uk" });
+export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@rodrunners.co.uk" });
+export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunners.co.uk" });
 export const REGION = "europe-west2"; // London
 
 /** What a referral pays once the referred customer's first order is paid. */

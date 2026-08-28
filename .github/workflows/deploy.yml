@@ -63,8 +63,8 @@ jobs:
           # back to its default of true, and every callable rejected the app
           # with UNAUTHENTICATED.
           {
-            printf 'SUPPORT_EMAIL=support@rodrunnersraffles.co.uk\n'
-            printf 'FROM_EMAIL=no-reply@rodrunnersraffles.co.uk\n'
+            printf 'SUPPORT_EMAIL=support@rodrunners.co.uk\n'
+            printf 'FROM_EMAIL=no-reply@rodrunners.co.uk\n'
             printf 'RRR_ENFORCE_APP_CHECK=%s\n' "$RRR_ENFORCE_APP_CHECK"
           } > "functions/.env.$PROJECT"
           cat "functions/.env.$PROJECT"

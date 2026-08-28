@@ -157,7 +157,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun shareCompetition(competitionId: String) {
-        val url = "https://rodrunnersraffles.co.uk/competition/$competitionId"
+        val url = "https://rodrunners.co.uk/competition/$competitionId"
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, "Have a look at this raffle on Rod Runners Raffles: $url")

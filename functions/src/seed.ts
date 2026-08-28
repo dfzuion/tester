@@ -270,7 +270,7 @@ function seedAppContent(batch: FirebaseFirestore.WriteBatch, db: FirebaseFiresto
     registeredName: "REPLACE WITH REGISTERED COMPANY NAME",
     companyNumber: "REPLACE",
     registeredAddress: "REPLACE",
-    supportEmail: "support@rodrunnersraffles.co.uk",
+    supportEmail: "support@rodrunners.co.uk",
     legalNote: "Replace every field here with your own registered details before release.",
   });
   batch.set(db.collection(Collections.appContent).doc("terms"), {
