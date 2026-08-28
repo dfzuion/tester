@@ -9,21 +9,21 @@ import androidx.compose.ui.graphics.Color
  * per screen region - so it reads as premium hardware rather than casino.
  */
 object RrrColors {
-    val Ink = Color(0xFF0C0F0A)          // app background
-    val Surface = Color(0xFF171C12)      // cards
-    val SurfaceRaised = Color(0xFF222819) // sheets, dialogs, inputs
-    val Hairline = Color(0xFF3E4A2C)     // 1dp dividers and card borders
+    val Ink = Color(0xFF0A0A09)          // app background
+    val Surface = Color(0xFF17150F)      // cards
+    val SurfaceRaised = Color(0xFF231F16) // sheets, dialogs, inputs
+    val Hairline = Color(0xFF3A3323)     // 1dp dividers and card borders
 
-    val Gold = Color(0xFFE0A03F)         // primary accent
-    val GoldBright = Color(0xFFFFC463)   // pressed / focus
-    val GoldDim = Color(0x3DE0A03F)      // tint fills
+    val Gold = Color(0xFFB0702F)         // primary accent
+    val GoldBright = Color(0xFFD08F4A)   // pressed / focus
+    val GoldDim = Color(0x3DB0702F)      // tint fills
 
-    val Bone = Color(0xFFF6EFE0)         // primary type
-    val Mist = Color(0xFFBDB69D)         // secondary type
-    val Slate = Color(0xFF867F68)        // tertiary type, disabled
+    val Bone = Color(0xFFF2EADA)         // primary type
+    val Mist = Color(0xFFB3AA95)         // secondary type
+    val Slate = Color(0xFF7D7461)        // tertiary type, disabled
 
     val Success = Color(0xFF95BB55)
-    val Warning = Color(0xFFF0A73F)
+    val Warning = Color(0xFFD9903C)
     val Danger = Color(0xFFDE6152)
 
     /**
@@ -33,6 +33,9 @@ object RrrColors {
     val Khaki = Color(0xFF8CA34B)
     val KhakiBright = Color(0xFFBDD17A)
     val KhakiDim = Color(0x3D8CA34B)
+
+    /** Deep bark brown, for fills that need weight without going flat black. */
+    val Bark = Color(0xFF3A2A1B)
 
     /** Weed green from the logo - used for subtle "live"/open states. */
     val Weed = Color(0xFF6E8446)
