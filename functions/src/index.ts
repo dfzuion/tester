@@ -54,6 +54,6 @@ export {
   grantCredit,
 } from "./credits";
 
-export { notifyEndingSoon } from "./notifications";
+export { notifyEndingSoon, deliverQueuedMail } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";

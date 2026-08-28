@@ -9,6 +9,8 @@ import { defineSecret, defineString } from "firebase-functions/params";
 export const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 export const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 export const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
+/** Either provider works; whichever key is set is the one used. */
+export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 
 export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@rodrunnersraffles.co.uk" });
 export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunnersraffles.co.uk" });

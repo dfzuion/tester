@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { Collections, FROM_EMAIL, REGION } from "./config";
+import { Collections, FROM_EMAIL, REGION, RESEND_API_KEY, SENDGRID_API_KEY } from "./config";
 
 /**
  * Push goes out through FCM to per-user device tokens.
@@ -152,6 +152,12 @@ export async function queueEmail(to: string | null | undefined, templateId: stri
       text: render(t.text ?? stripHtml(t.html), vars),
     },
     templateId,
+    // deliverQueuedMail picks these up. Queuing is deliberately separated from
+    // sending: the secrets live on that one function, so every caller can queue
+    // an email without declaring a provider key, and a provider outage can
+    // never fail a draw or a checkout.
+    deliveryStatus: "pending",
+    attempts: 0,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 }
@@ -214,3 +220,128 @@ export async function notifyAdmins(
     console.error("admin notification failed", { title, err });
   }
 }
+
+// ------------------------------------------------------------------ delivery
+
+interface OutboundEmail {
+  to: string;
+  from: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * Hands one email to whichever provider is configured. Returns null on success
+ * or a reason on failure, so the caller can record it against the queued
+ * document rather than losing it to a log line.
+ *
+ * Node 20 has fetch built in, so neither provider needs a dependency.
+ */
+async function sendViaProvider(email: OutboundEmail): Promise<string | null> {
+  const resend = (RESEND_API_KEY.value() ?? "").trim();
+  const sendgrid = (SENDGRID_API_KEY.value() ?? "").trim();
+
+  if (resend) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: email.from, to: [email.to],
+        subject: email.subject, html: email.html, text: email.text,
+      }),
+    });
+    if (res.ok) return null;
+    return `resend ${res.status}: ${(await res.text()).slice(0, 300)}`;
+  }
+
+  if (sendgrid) {
+    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sendgrid}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: email.to }] }],
+        from: { email: email.from },
+        subject: email.subject,
+        content: [
+          { type: "text/plain", value: email.text },
+          { type: "text/html", value: email.html },
+        ],
+      }),
+    });
+    if (res.ok || res.status === 202) return null;
+    return `sendgrid ${res.status}: ${(await res.text()).slice(0, 300)}`;
+  }
+
+  return "no email provider configured - set RESEND_API_KEY or SENDGRID_API_KEY in Secret Manager";
+}
+
+/**
+ * Drains the mail queue.
+ *
+ * Every email the app writes used to land in this collection and stay there:
+ * delivery depended on the Trigger Email extension, which was never installed,
+ * so no winner has ever actually been emailed. This is that missing half.
+ *
+ * Runs every minute, five attempts per message, and marks what it could not
+ * send so a failure is visible in Firestore instead of silently vanishing.
+ */
+export const deliverQueuedMail = onSchedule(
+  {
+    region: REGION,
+    schedule: "every 1 minutes",
+    secrets: [RESEND_API_KEY, SENDGRID_API_KEY],
+  },
+  async () => {
+    const db = admin.firestore();
+    const pending = await db.collection(Collections.mail)
+      .where("deliveryStatus", "in", ["pending", "retry"])
+      .orderBy("createdAt")
+      .limit(50)
+      .get();
+    if (pending.empty) return;
+
+    for (const doc of pending.docs) {
+      const d = doc.data();
+      const attempts = Number(d.attempts ?? 0);
+      const to = Array.isArray(d.to) ? d.to[0] : d.to;
+      if (!to) {
+        await doc.ref.update({ deliveryStatus: "abandoned", error: "no recipient" });
+        continue;
+      }
+
+      let failure: string | null;
+      try {
+        failure = await sendViaProvider({
+          to: String(to),
+          from: String(d.from ?? FROM_EMAIL.value()),
+          subject: String(d.message?.subject ?? ""),
+          html: String(d.message?.html ?? ""),
+          text: String(d.message?.text ?? ""),
+        });
+      } catch (err) {
+        failure = err instanceof Error ? err.message : String(err);
+      }
+
+      if (failure === null) {
+        await doc.ref.update({
+          deliveryStatus: "sent",
+          attempts: attempts + 1,
+          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          error: admin.firestore.FieldValue.delete(),
+        });
+      } else {
+        // Five attempts is roughly five minutes; past that it is a
+        // configuration problem, not a blip, and retrying forever just hides it.
+        const done = attempts + 1 >= 5;
+        await doc.ref.update({
+          deliveryStatus: done ? "failed" : "retry",
+          attempts: attempts + 1,
+          error: failure,
+          lastAttemptAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.error("email delivery failed", { id: doc.id, attempts: attempts + 1, failure });
+      }
+    }
+  }
+);
