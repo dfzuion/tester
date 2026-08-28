@@ -238,9 +238,20 @@ interface OutboundEmail {
  *
  * Node 20 has fetch built in, so neither provider needs a dependency.
  */
+/**
+ * A secret has to exist in Secret Manager before a function that declares it
+ * can be deployed at all, so the ones we have not signed up for yet are seeded
+ * with the word "placeholder". That is not a key: treat it as unset, otherwise
+ * every email would be posted to Resend with a nonsense bearer token.
+ */
+function configured(value: string | undefined): string {
+  const v = (value ?? "").trim();
+  return v === "placeholder" ? "" : v;
+}
+
 async function sendViaProvider(email: OutboundEmail): Promise<string | null> {
-  const resend = (RESEND_API_KEY.value() ?? "").trim();
-  const sendgrid = (SENDGRID_API_KEY.value() ?? "").trim();
+  const resend = configured(RESEND_API_KEY.value());
+  const sendgrid = configured(SENDGRID_API_KEY.value());
 
   if (resend) {
     const res = await fetch("https://api.resend.com/emails", {

@@ -69,6 +69,26 @@ jobs:
           } > "functions/.env.$PROJECT"
           cat "functions/.env.$PROJECT"
 
+      # A function that declares a secret cannot be deployed until that secret
+      # exists: the CLI stops and prompts for a value, which in CI just hangs
+      # and then fails. RESEND_API_KEY did exactly that and every deploy since
+      # the mail queue landed has died here. Seed whatever is missing with the
+      # word "placeholder" - the code treats that as unset - so a deploy is
+      # never blocked by a provider we have not signed up for yet.
+      - name: Make sure every declared secret exists
+        env:
+          PROJECT: rod-runners-raffles
+        run: |
+          for NAME in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET RESEND_API_KEY SENDGRID_API_KEY; do
+            if firebase functions:secrets:access "$NAME" --project "$PROJECT" >/dev/null 2>&1; then
+              echo "$NAME already exists - left untouched"
+            else
+              echo "$NAME is missing - seeding it with a placeholder"
+              printf 'placeholder' | firebase functions:secrets:set "$NAME" \
+                --project "$PROJECT" --non-interactive --data-file -
+            fi
+          done
+
       - name: Deploy
         env:
           RRR_ENFORCE_APP_CHECK: ${{ inputs.enforceAppCheck }}
