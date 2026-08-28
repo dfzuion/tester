@@ -36,7 +36,7 @@ fun Wordmark(modifier: Modifier = Modifier, compact: Boolean = false) {
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier
-            .height(if (compact) 34.dp else 108.dp)
+            .height(if (compact) 48.dp else 168.dp)
             .clearAndSetSemantics { contentDescription = "Rod Runners Raffles" },
     )
 }

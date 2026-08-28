@@ -3,6 +3,8 @@ package uk.co.rodrunners.raffles.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
+import android.net.Uri
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.tasks.await
@@ -39,7 +41,22 @@ data class DrawOutcome(
 class AdminRepository @Inject constructor(
     private val db: FirebaseFirestore,
     private val functions: FirebaseFunctions,
+    private val storage: FirebaseStorage,
 ) {
+
+    /**
+     * Uploads a photo the admin picked on their phone and hands back the public
+     * download URL, so nobody has to find a hosting service and paste a link.
+     * Storage rules already allow admins to write under competitions/ and cap
+     * the size at 8MB; anything larger is rejected there, not here.
+     */
+    suspend fun uploadCompetitionImage(uri: Uri): String {
+        val name = "competitions/" + System.currentTimeMillis() + "_" +
+            (0..7).map { ('a'..'z').random() }.joinToString("") + ".jpg"
+        val ref = storage.reference.child(name)
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
     suspend fun dashboard(): DashboardStats {
         val paid = db.collection(Collections.ORDERS)
             .whereEqualTo("paymentStatus", "paid")

@@ -94,6 +94,51 @@ export const suspendCustomer = onCall({ region: REGION, enforceAppCheck: ENFORCE
   return { ok: true };
 });
 
+
+/**
+ * Every live raffle has to point at a rules document. Nothing in the editor
+ * ever set one, so publishing was impossible - the check rejected a field the
+ * admin had no way to fill in. Rather than make it another box to fill, the
+ * first publish creates a standard rules document and attaches it. The copy is
+ * editable afterwards, and a raffle that already has its own rulesId is left
+ * alone.
+ */
+const STANDARD_RULES_ID = "rules_standard";
+
+async function ensureStandardRules(): Promise<string> {
+  const db = admin.firestore();
+  const ref = db.collection(Collections.appContent).doc(STANDARD_RULES_ID);
+  const snap = await ref.get();
+  if (snap.exists) return STANDARD_RULES_ID;
+
+  await ref.set({
+    title: "Standard raffle rules",
+    version: "1",
+    sections: [
+      { heading: "Who can enter", body: "Open to residents of Great Britain aged 18 or over. Employees of the promoter and their immediate families may not enter." },
+      { heading: "Entry limits", body: "Entry limits are shown on each raffle page and are enforced across all of your orders." },
+      { heading: "Closing", body: "A raffle closes at the published closing time, or earlier if every entry is sold." },
+      { heading: "How the winner is chosen", body: "After closing, one entry is drawn at random from all eligible paid entries using a seeded random draw. The draw record, including the number of eligible entries and the seed hash, is retained." },
+      { heading: "Free entry route", body: "A free entry route may apply to this promotion. Where it does, the postal entry address and conditions are published in full in this section before the raffle opens." },
+      { heading: "Refunds and cancellation", body: "If a raffle is cancelled before the draw, every paid entry is refunded in full to the original payment method." },
+      { heading: "Responsible participation", body: "Only spend what you can comfortably afford. Entry limits and spend reminders are available in Account settings." },
+    ],
+    legalReviewRequired: true,
+    note: "PLACEHOLDER COPY. Replace with rules approved by your own legal advisers before running a paid raffle.",
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return STANDARD_RULES_ID;
+}
+
+/** Field names are for developers. Admins get told what is actually missing. */
+const PUBLISH_REQUIREMENTS: { field: string; whatsMissing: string }[] = [
+  { field: "title", whatsMissing: "Give the raffle a title" },
+  { field: "entryPricePence", whatsMissing: "Set the entry price" },
+  { field: "maxEntries", whatsMissing: "Set how many entries there are" },
+  { field: "closesAt", whatsMissing: "Set a closing date" },
+  { field: "heroImageUrl", whatsMissing: "Add a photo of the prize" },
+];
+
 /** Publishing a raffle is a server action so status transitions stay legal. */
 export const setCompetitionStatus = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const ctx = await requireAdmin(req, "competitions.write");
@@ -109,13 +154,24 @@ export const setCompetitionStatus = onCall({ region: REGION, enforceAppCheck: EN
   if (c.status === "closed" || c.status === "drawn") {
     throw new HttpsError("failed-precondition", "A closed raffle can't be reopened.");
   }
+  const update: Record<string, unknown> = {
+    status,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    publishedBy: ctx.uid,
+  };
+
   if (status === "live") {
-    for (const field of ["title", "entryPricePence", "maxEntries", "closesAt", "heroImageUrl", "rulesId"]) {
-      if (c[field] == null) throw new HttpsError("failed-precondition", `Set ${field} before publishing.`);
+    const missing = PUBLISH_REQUIREMENTS.filter((r) => c[r.field] == null).map((r) => r.whatsMissing);
+    if (missing.length) {
+      throw new HttpsError(
+        "failed-precondition",
+        missing.length === 1 ? `${missing[0]} before publishing.` : `Before publishing: ${missing.join(", ")}.`
+      );
     }
+    if (c.rulesId == null) update.rulesId = await ensureStandardRules();
   }
 
-  await ref.update({ status, updatedAt: admin.firestore.FieldValue.serverTimestamp(), publishedBy: ctx.uid });
+  await ref.update(update);
   await writeAudit({
     action: status === "live" ? "competition.published" : "competition.updated",
     actorId: ctx.uid, actorRole: "admin", objectType: "competition", objectId: competitionId,

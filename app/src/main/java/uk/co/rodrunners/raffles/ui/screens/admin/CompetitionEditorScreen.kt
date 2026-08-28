@@ -1,6 +1,13 @@
 package uk.co.rodrunners.raffles.ui.screens.admin
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +24,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +39,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +52,7 @@ import java.util.Calendar
 import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.data.model.Competition
 import uk.co.rodrunners.raffles.ui.components.Chip
+import uk.co.rodrunners.raffles.ui.components.PrizeImage
 import uk.co.rodrunners.raffles.ui.components.GoldButton
 import uk.co.rodrunners.raffles.ui.components.QuietButton
 import uk.co.rodrunners.raffles.ui.components.SectionHeader
@@ -118,10 +131,11 @@ fun CompetitionEditorScreen(
                 RrrTextField(d.brand, { v -> viewModel.edit { it.copy(brand = v) } }, "Brand (optional)")
             }
             item {
-                RrrTextField(
-                    d.heroImageUrl, { v -> viewModel.edit { it.copy(heroImageUrl = v) } },
-                    "Hero image URL",
-                    supportingText = "Paste a link to the photo. Firebase Storage or any https address.",
+                HeroImagePicker(
+                    url = d.heroImageUrl,
+                    uploading = state.uploadingImage,
+                    onPicked = { uri -> viewModel.uploadHeroImage(uri) },
+                    onClear = { viewModel.edit { it.copy(heroImageUrl = "") } },
                 )
             }
             item {
@@ -291,5 +305,75 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
 ) {
     bundles.forEachIndexed { index, bundle ->
         item(key = "bundle_$index") { content(index, bundle) }
+    }
+}
+
+/**
+ * Pick a photo from the phone and upload it. The old screen asked for a URL,
+ * which meant finding somewhere to host the picture first - fine for a
+ * developer, useless for anyone actually running raffles.
+ */
+@Composable
+private fun HeroImagePicker(
+    url: String,
+    uploading: Boolean,
+    onPicked: (android.net.Uri) -> Unit,
+    onClear: () -> Unit,
+) {
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) onPicked(uri) }
+
+    fun open() = picker.launch(
+        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Prize photo",
+            style = MaterialTheme.typography.labelLarge,
+            color = RrrColors.Mist,
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(Dimens.cardRadius))
+                .background(RrrColors.SurfaceRaised)
+                .border(1.dp, RrrColors.Hairline, RoundedCornerShape(Dimens.cardRadius))
+                .clickable(enabled = !uploading) { open() },
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                uploading -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = RrrColors.Khaki)
+                    Spacer(Modifier.height(12.dp))
+                    Text("Uploading photo...", color = RrrColors.Mist,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                url.isNotBlank() -> PrizeImage(
+                    url = url,
+                    contentDescription = "Prize photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+                else -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Tap to choose a photo",
+                        style = MaterialTheme.typography.titleSmall, color = RrrColors.Bone)
+                    Text("Straight from your phone. PNG or JPG, up to 8MB.",
+                        style = MaterialTheme.typography.bodySmall, color = RrrColors.Slate,
+                        textAlign = TextAlign.Center)
+                }
+            }
+        }
+        if (url.isNotBlank() && !uploading) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QuietButton("Change photo", onClick = { open() })
+                QuietButton("Remove", onClick = onClear)
+            }
+        }
     }
 }

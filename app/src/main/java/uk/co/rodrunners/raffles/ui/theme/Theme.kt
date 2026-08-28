@@ -103,7 +103,7 @@ fun RodRunnersTheme(content: @Composable () -> Unit) {
             Modifier
                 .fillMaxSize()
                 .background(RrrColors.Ink)
-                .camoTexture(0.60f)
+                .camoTexture(0.50f)
         ) { content() }
     }
 }

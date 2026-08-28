@@ -77,8 +77,8 @@ fun EmptyState(
             painter = painterResource(R.drawable.logo_full),
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            alpha = 0.85f,
-            modifier = Modifier.fillMaxWidth(0.62f),
+            alpha = 0.92f,
+            modifier = Modifier.fillMaxWidth(0.86f),
         )
         Spacer(Modifier.height(18.dp))
         GoldRule(width = 28.dp)

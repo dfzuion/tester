@@ -11,9 +11,9 @@ import androidx.compose.ui.graphics.Color
  */
 object RrrColors {
     val Ink = Color(0xFF090B07)          // app background, black with a green cast
-    val Surface = Color(0xE614180F)      // cards - translucent so the camo shows
-    val SurfaceRaised = Color(0xF21E2415) // sheets, dialogs, inputs
-    val Hairline = Color(0xFF3E4728)     // 1dp dividers and card borders
+    val Surface = Color(0xF01F2616)      // cards - lifted well clear of the camo
+    val SurfaceRaised = Color(0xF82B3420) // sheets, dialogs, inputs
+    val Hairline = Color(0xFF55603A)     // 1dp dividers and card borders
 
     /**
      * Khaki is the interface colour: chips, selected states, primary buttons.

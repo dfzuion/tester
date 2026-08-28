@@ -76,8 +76,9 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-          Box(Modifier.fillMaxWidth().background(RrrColors.Ink.copy(alpha = 0.86f))) {
+          Box(Modifier.fillMaxWidth().background(RrrColors.Ink.copy(alpha = 0.72f))) {
             TopAppBar(
+                modifier = Modifier.height(74.dp),
                 title = { Wordmark(compact = true) },
                 actions = {
                     IconButton(onClick = onOpenSearch) {

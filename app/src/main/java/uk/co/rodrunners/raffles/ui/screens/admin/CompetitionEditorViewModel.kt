@@ -1,5 +1,6 @@
 package uk.co.rodrunners.raffles.ui.screens.admin
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,7 @@ data class EditorState(
     val entriesSold: Int = 0,
     val loading: Boolean = false,
     val saving: Boolean = false,
+    val uploadingImage: Boolean = false,
     val savedId: String? = null,
     val error: AppError? = null,
 ) {
@@ -53,6 +55,20 @@ class CompetitionEditorViewModel @Inject constructor(
 
     fun edit(block: (CompetitionDraft) -> CompetitionDraft) =
         _state.update { it.copy(draft = block(it.draft), error = null) }
+
+    /** Picked a photo on the phone: upload it and drop the URL into the draft. */
+    fun uploadHeroImage(uri: Uri) {
+        _state.update { it.copy(uploadingImage = true, error = null) }
+        viewModelScope.launch {
+            runCatching { admin.uploadCompetitionImage(uri) }
+                .onSuccess { url ->
+                    _state.update {
+                        it.copy(uploadingImage = false, draft = it.draft.copy(heroImageUrl = url))
+                    }
+                }
+                .onFailure { t -> _state.update { it.copy(uploadingImage = false, error = Errors.from(t)) } }
+        }
+    }
 
     fun addBundle() = edit { d ->
         val q = if (d.bundles.isEmpty()) 5 else d.bundles.last().quantity * 2
