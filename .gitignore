@@ -15,3 +15,5 @@ functions/lib-test/
 *.jks
 *.keystore
 /google-services.json
+/rod-runners-raffles-firebase-adminsdk-*.json
+firebase-debug.log
