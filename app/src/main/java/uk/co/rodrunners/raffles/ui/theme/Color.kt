@@ -4,16 +4,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * Tackle-brand palette: khaki green, bark brown and black, the three tones the
- * digital camo is cut from. Green carries the interface - chips, selected
- * states, live badges - brown is kept for money and prizes so it still lands,
- * and everything sits on a green-black base with the camo reading through.
+ * Tackle-brand palette: khaki green, bronze and near-black.
+ *
+ * The camo used to sit behind the whole app at half strength. The logo is a
+ * detailed illustration and the prize photography is the point of the screen,
+ * so a busy texture behind both fought them and made everything look muddy.
+ * Camo is now a header band only, and the base is a calm near-black that lets
+ * the photography carry the richness.
  */
 object RrrColors {
-    val Ink = Color(0xFF090B07)          // app background, black with a green cast
-    val Surface = Color(0xF01F2616)      // cards - lifted well clear of the camo
-    val SurfaceRaised = Color(0xF82B3420) // sheets, dialogs, inputs
-    val Hairline = Color(0xFF55603A)     // 1dp dividers and card borders
+    val Ink = Color(0xFF0B0C0A)          // app background
+    val Surface = Color(0xFF11140E)      // cards, opaque now the camo is out from behind them
+    val SurfaceRaised = Color(0xFF161A11) // sheets, dialogs, inputs
+    val Hairline = Color(0xFF232819)     // 1dp dividers and card borders
 
     /**
      * Khaki is the interface colour: chips, selected states, primary buttons.
@@ -28,12 +31,15 @@ object RrrColors {
     val GoldDim = Color(0x3DC07934)
 
     val Bone = Color(0xFFF0EBDB)         // primary type
-    val Mist = Color(0xFFACB196)         // secondary type
-    val Slate = Color(0xFF767C63)        // tertiary type, disabled
+    val Mist = Color(0xFF8E9678)         // secondary type
+    val Slate = Color(0xFF5E664F)        // tertiary type, disabled
 
     val Success = Color(0xFF9CC258)
     val Warning = Color(0xFFD9903C)
     val Danger = Color(0xFFDE6152)
+
+    /** Top of the masthead gradient - warm, so the camo band reads as fabric. */
+    val HeaderTop = Color(0xFF161A11)
 
     /** Deep bark brown, for fills that need weight without going flat black. */
     val Bark = Color(0xFF3A2A1B)

@@ -71,7 +71,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -351,7 +350,6 @@ private fun ReferralCard(code: String) {
         Modifier
             .padding(horizontal = Dimens.gutter)
             .fillMaxWidth()
-            .shadow(10.dp, RrrShapes.large, clip = false)
             .clip(RrrShapes.large)
             .background(RrrColors.Surface)
             .border(BorderStroke(1.dp, RrrColors.Hairline), RrrShapes.large)

@@ -30,13 +30,19 @@ import uk.co.rodrunners.raffles.ui.theme.RrrType
  * reappears as the section divider throughout the app.
  */
 @Composable
-fun Wordmark(modifier: Modifier = Modifier, compact: Boolean = false) {
+fun Wordmark(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    height: androidx.compose.ui.unit.Dp = if (compact) 48.dp else 168.dp,
+) {
+    // Height is a parameter rather than something the caller sets on the
+    // modifier, because this applies its own height and would silently win.
     Image(
         painter = painterResource(R.drawable.logo_full),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier
-            .height(if (compact) 48.dp else 168.dp)
+            .height(height)
             .clearAndSetSemantics { contentDescription = "Rod Runners Raffles" },
     )
 }

@@ -56,6 +56,7 @@ import uk.co.rodrunners.raffles.ui.components.StateHost
 import uk.co.rodrunners.raffles.ui.components.Wordmark
 import uk.co.rodrunners.raffles.ui.theme.Dimens
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
+import uk.co.rodrunners.raffles.ui.theme.camoHeader
 import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import uk.co.rodrunners.raffles.ui.theme.RrrType
 
@@ -76,15 +77,17 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-          Box(Modifier.fillMaxWidth().background(RrrColors.Ink.copy(alpha = 0.72f))) {
+          // The masthead: camo band behind a large mark, closed by a bronze
+          // rule. This is the only place the camo appears.
+          Column(Modifier.fillMaxWidth().camoHeader()) {
             TopAppBar(
-                modifier = Modifier.height(84.dp),
+                modifier = Modifier.height(96.dp),
                 // Centred rather than left-aligned: with search and
                 // notifications on the right, a left-aligned mark looked like
                 // an afterthought squeezed into the corner.
                 title = {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Wordmark(compact = true)
+                        Wordmark(compact = true, height = 74.dp)
                     }
                 },
                 actions = {
@@ -109,6 +112,21 @@ fun HomeScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
+            Box(
+                Modifier
+                    .padding(horizontal = Dimens.gutter)
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            0f to Color.Transparent,
+                            0.18f to RrrColors.Gold,
+                            0.82f to RrrColors.Gold,
+                            1f to Color.Transparent,
+                        )
+                    )
+            )
+            Spacer(Modifier.height(4.dp))
           }
         },
     ) { padding ->

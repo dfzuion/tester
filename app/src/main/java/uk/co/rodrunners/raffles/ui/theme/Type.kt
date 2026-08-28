@@ -2,6 +2,8 @@ package uk.co.rodrunners.raffles.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.DeviceFontFamilyName
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -15,7 +17,12 @@ import androidx.compose.ui.unit.sp
  * To swap in a licensed display face, drop the .ttf into res/font and change
  * DisplayFamily - nothing else needs to move.
  */
-val DisplayFamily = FontFamily.SansSerif
+/**
+ * Android ships a condensed grotesque, and headings set in it read as designed
+ * rather than as the system default. Nothing is downloaded and nothing is
+ * bundled - if the device lacks it, Compose falls back to the regular sans.
+ */
+val DisplayFamily = FontFamily(Font(DeviceFontFamilyName("sans-serif-condensed")))
 val BodyFamily = FontFamily.SansSerif
 
 object RrrType {

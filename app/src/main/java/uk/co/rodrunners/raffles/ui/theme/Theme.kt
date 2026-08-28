@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.ShaderBrush
@@ -67,17 +68,36 @@ object Dimens {
 }
 
 /**
- * The digital camo wash. Kept faint on purpose: it should read as fabric under
- * the content, never as a pattern competing with the photography. One tile is
- * shared by every caller, repeated by the shader rather than redrawn.
+ * The masthead treatment: a warm dark gradient with the camo fading out as it
+ * descends, so the pattern reads at the top of the screen and has gone by the
+ * time it reaches the content.
  */
 @Composable
-fun Modifier.camoTexture(alpha: Float = 0.10f): Modifier {
+fun Modifier.camoHeader(): Modifier {
     val tile = androidx.compose.ui.graphics.ImageBitmap.imageResource(R.drawable.camo_tile)
-    val brush = remember(tile) {
+    val shader = remember(tile) {
         ShaderBrush(ImageShader(tile, TileMode.Repeated, TileMode.Repeated))
     }
-    return this.background(brush, alpha = alpha)
+    return this
+        .background(
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                0f to RrrColors.HeaderTop, 1f to RrrColors.Ink,
+            )
+        )
+        .drawWithContent {
+            drawContent()
+            drawRect(
+                brush = shader,
+                alpha = 0.20f,
+                blendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
+            )
+            // Fade the pattern out towards the bottom edge.
+            drawRect(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0f to Color.Transparent, 1f to RrrColors.Ink,
+                )
+            )
+        }
 }
 
 @Composable
@@ -97,13 +117,8 @@ fun RodRunnersTheme(content: @Composable () -> Unit) {
         typography = RrrTypography,
         shapes = RrrShapes,
     ) {
-        // One camo wash for the whole app. Screens sit on it transparently, so
-        // the texture runs edge to edge instead of stopping at each surface.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(RrrColors.Ink)
-                .camoTexture(0.50f)
-        ) { content() }
+        // A calm base. The camo lives in the masthead now, not behind
+        // everything - see camoHeader.
+        Box(Modifier.fillMaxSize().background(RrrColors.Ink)) { content() }
     }
 }

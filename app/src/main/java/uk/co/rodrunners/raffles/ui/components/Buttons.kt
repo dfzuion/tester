@@ -47,8 +47,8 @@ fun GoldButton(
         enabled = enabled && !loading,
         shape = RrrShapes.medium,
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 6.dp,
-            pressedElevation = 2.dp,
+            defaultElevation = 4.dp,
+            pressedElevation = 0.dp,
             disabledElevation = 0.dp,
         ),
         colors = ButtonDefaults.buttonColors(
