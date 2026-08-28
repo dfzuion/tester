@@ -20,11 +20,22 @@ export const bootstrapFirstAdmin = onCall(
   { region: REGION, secrets: [ADMIN_BOOTSTRAP_KEY] },
   async (req: CallableRequest) => {
     const uid = requireAuth(req);
-    const supplied = String(req.data?.key ?? "");
-    const expected = ADMIN_BOOTSTRAP_KEY.value();
+    // Both sides get trimmed: a value typed into the Secret Manager console
+    // very often carries a trailing newline, and an invisible character is a
+    // miserable thing to debug from a "that key is wrong" message.
+    const supplied = String(req.data?.key ?? "").trim();
+    const expected = (ADMIN_BOOTSTRAP_KEY.value() ?? "").trim();
     if (!expected) throw new HttpsError("failed-precondition", "Bootstrap is not configured.");
-    // Length-independent comparison: never leak the key through timing.
-    if (supplied.length !== expected.length || !supplied.length) {
+    if (expected === "PLACEHOLDER_REPLACE_ME") {
+      throw new HttpsError(
+        "failed-precondition",
+        "The setup key is still the placeholder. Set ADMIN_BOOTSTRAP_KEY in Secret Manager, then deploy the backend again so the function picks up the new version."
+      );
+    }
+    if (!supplied) throw new HttpsError("invalid-argument", "Enter the setup key.");
+    // Constant-time compare on equal lengths; length is checked separately so a
+    // mismatch cannot be learned from timing alone.
+    if (supplied.length !== expected.length) {
       throw new HttpsError("permission-denied", "That setup key is not right.");
     }
     let diff = 0;
