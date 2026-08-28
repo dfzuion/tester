@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.util.Log
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.ktx.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
@@ -14,6 +15,8 @@ import javax.inject.Inject
 import uk.co.rodrunners.raffles.core.NotificationChannels
 import uk.co.rodrunners.raffles.payment.StripePaymentGateway
 
+private const val TAG = "RodRunnersApp"
+
 @HiltAndroidApp
 class RodRunnersApp : Application() {
 
@@ -22,16 +25,32 @@ class RodRunnersApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // App Check makes every callable function reject traffic that didn't
-        // come from a genuine install of this app.
-        Firebase.appCheck.installAppCheckProviderFactory(
-            if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
-            else PlayIntegrityAppCheckProviderFactory.getInstance()
-        )
+        // Nothing here is worth crashing the app on launch for. A bad Stripe
+        // key, App Check being unavailable on the device, or a notification
+        // channel failing should degrade that one feature, not stop someone
+        // opening the app at all.
+        runCatching {
+            // App Check makes every callable function reject traffic that
+            // didn't come from a genuine install of this app.
+            Firebase.appCheck.installAppCheckProviderFactory(
+                if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
+                else PlayIntegrityAppCheckProviderFactory.getInstance()
+            )
+        }.onFailure { Log.e(TAG, "App Check unavailable - callable functions may be rejected", it) }
 
-        Firebase.crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
-        stripe.initialise()
-        createNotificationChannels()
+        // Staging is a test build we need diagnostics from; a local debug build
+        // still reports nothing.
+        runCatching {
+            Firebase.crashlytics.setCrashlyticsCollectionEnabled(
+                !BuildConfig.DEBUG || BuildConfig.FLAVOR == "staging"
+            )
+        }.onFailure { Log.e(TAG, "Crashlytics could not be configured", it) }
+
+        runCatching { stripe.initialise() }
+            .onFailure { Log.e(TAG, "Stripe could not be initialised - checkout will not work", it) }
+
+        runCatching { createNotificationChannels() }
+            .onFailure { Log.e(TAG, "Notification channels could not be created", it) }
     }
 
     private fun createNotificationChannels() {

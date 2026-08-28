@@ -18,6 +18,10 @@ val localProps = Properties().apply {
 }
 fun secret(key: String, fallback: String = ""): String =
     (localProps.getProperty(key) ?: System.getenv(key) ?: fallback)
+        // Secrets pasted into CI often carry a trailing newline or stray quotes;
+        // those survive the build and only fail at runtime, so strip them here.
+        .trim()
+        .trim('"')
 
 // A release build is only signable when all four values are present. If they
 // aren't, the release build type is left unsigned and the check below stops the
