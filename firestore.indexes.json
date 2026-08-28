@@ -1,58 +1,379 @@
 {
   "indexes": [
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "closesAt", "order": "ASCENDING" } ] },
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "category", "order": "ASCENDING" },
-      { "fieldPath": "closesAt", "order": "ASCENDING" } ] },
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "entriesSold", "order": "DESCENDING" } ] },
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "entryPricePence", "order": "ASCENDING" } ] },
-    { "collectionGroup": "competitions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "endingSoonNotified", "order": "ASCENDING" },
-      { "fieldPath": "closesAt", "order": "ASCENDING" } ] },
-    { "collectionGroup": "entries", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "purchasedAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "entries", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "competitionId", "order": "ASCENDING" },
-      { "fieldPath": "entryNumber", "order": "ASCENDING" } ] },
-    { "collectionGroup": "entries", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "isWinner", "order": "ASCENDING" },
-      { "fieldPath": "purchasedAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "entries", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "competitionId", "order": "ASCENDING" },
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "entryNumber", "order": "ASCENDING" } ] },
-    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "orderStatus", "order": "ASCENDING" },
-      { "fieldPath": "reservedUntil", "order": "ASCENDING" } ] },
-    { "collectionGroup": "winners", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "published", "order": "ASCENDING" },
-      { "fieldPath": "drawnAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "favourites", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "supportTickets", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "userId", "order": "ASCENDING" },
-      { "fieldPath": "lastMessageAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "auditLogs", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "objectType", "order": "ASCENDING" },
-      { "fieldPath": "createdAt", "order": "DESCENDING" } ] }
+    {
+      "collectionGroup": "auditLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "objectType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "closesAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "closesAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "drawnAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "endingSoonNotified",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "closesAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "entriesSold",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "entryPricePence",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "competitions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "featured",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "entryNumber",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "entryNumber",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isWinner",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "purchasedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "purchasedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "faq",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "published",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "favourites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "instantWins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "prizeName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "instantWins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "instantWins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "wonBy",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "wonAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "orderStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "reservedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "paymentStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "supportTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastMessageAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "winners",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "competitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "published",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "winners",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "published",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "drawnAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "winners",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "winnerUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "drawnAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
   ],
   "fieldOverrides": []
 }
