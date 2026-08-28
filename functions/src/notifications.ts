@@ -78,12 +78,69 @@ function channelFor(category: string): string {
 }
 
 /** Renders a Firestore-stored template and queues it for delivery. */
+
+/**
+ * Built-in copy for the emails the app has to be able to send.
+ *
+ * Templates used to come only from Firestore, and the only thing that ever
+ * wrote them was the demo seeder - so on a real project every template was
+ * missing and queueEmail dropped the message with a console warning. Nobody
+ * ever got a winner email. A template stored in Firestore still wins, so the
+ * copy stays editable; these are the floor, not a replacement.
+ */
+const DEFAULT_TEMPLATES: Record<string, { subject: string; html: string }> = {
+  winner_notification: {
+    subject: "You've won {{prizeName}}",
+    html: `<p>Hi {{displayName}},</p>
+<p>Entry number <strong>{{entryNumber}}</strong> has won <strong>{{prizeName}}</strong> on {{competitionTitle}}.</p>
+<p>We'll be in touch shortly to arrange getting the prize to you. Congratulations.</p>
+<p>Rod Runners Raffles</p>`,
+  },
+  instant_win_notification: {
+    subject: "Instant win: {{prizeName}}",
+    html: `<p>Hi {{displayName}},</p>
+<p>You've just won <strong>{{prizeName}}</strong> on {{competitionTitle}} with entry {{entryNumber}}.</p>
+<p>{{settlement}}</p>
+<p>Rod Runners Raffles</p>`,
+  },
+  welcome: {
+    subject: "Welcome to Rod Runners Raffles",
+    html: `<p>Hi {{displayName}},</p>
+<p>Your account is ready. Every raffle shows its entry price, how many entries there are and when it closes, and the full rules sit on each raffle page.</p>
+<p>Tight lines.</p>
+<p>Rod Runners Raffles</p>`,
+  },
+  purchase_confirmation: {
+    subject: "Your entries for {{competitionTitle}}",
+    html: `<p>Hi {{displayName}},</p>
+<p>Order {{orderNumber}} is confirmed: <strong>{{quantity}}</strong> entries for {{competitionTitle}}, {{total}}.</p>
+<p>Your entry numbers are {{entryNumbers}}.</p>
+<p>Rod Runners Raffles</p>`,
+  },
+  support_received: {
+    subject: "We've got your message",
+    html: `<p>Hi {{displayName}},</p>
+<p>Thanks for getting in touch. Your ticket reference is {{ticketId}} and we'll reply by email.</p>
+<p>Rod Runners Raffles</p>`,
+  },
+  admin_alert: {
+    subject: "[Rod Runners] {{title}}",
+    html: `<p>{{title}}</p><p>{{body}}</p><p>Sent automatically by Rod Runners Raffles.</p>`,
+  },
+};
+
 export async function queueEmail(to: string | null | undefined, templateId: string, vars: Record<string, string | number>) {
   if (!to) return;
   const db = admin.firestore();
   const tpl = await db.collection(Collections.emailTemplates).doc(templateId).get();
-  if (!tpl.exists) { console.warn(`Email template missing: ${templateId}`); return; }
-  const t = tpl.data()!;
+  const fallback = DEFAULT_TEMPLATES[templateId];
+  if (!tpl.exists && !fallback) {
+    console.warn(`Email template missing and no built-in default: ${templateId}`);
+    return;
+  }
+  const t = (tpl.exists ? tpl.data()! : fallback!) as {
+    subject: string; html: string; text?: string; enabled?: boolean;
+  };
   if (t.enabled === false) return;
 
   await db.collection(Collections.mail).add({

@@ -199,7 +199,7 @@ fun CompetitionEditorScreen(
                     if (d.maxEntriesPerCustomer == 0) "" else d.maxEntriesPerCustomer.toString(),
                     { v -> viewModel.edit { it.copy(maxEntriesPerCustomer = v.filter { c -> c.isDigit() }.toIntOrNull() ?: 0) } },
                     "Max entries per customer", keyboardType = KeyboardType.Number,
-                    supportingText = "Leave blank for no limit.",
+                    supportingText = "Leave blank for the default of 100 per person.",
                 )
             }
             item {

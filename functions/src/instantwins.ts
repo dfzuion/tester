@@ -3,7 +3,7 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
-import { pushToUser, createUserNotification, notifyAdmins } from "./notifications";
+import { pushToUser, createUserNotification, notifyAdmins, queueEmail } from "./notifications";
 import { publicName } from "./draw";
 import { moveCreditStandalone } from "./credits";
 
@@ -394,6 +394,22 @@ export async function awardInstantWins(params: {
       deepLink: `rrr://orders/${params.orderId}`,
     });
     await pushToUser(params.userId, "win", "Instant win!", body, { orderId: params.orderId });
+
+    // Email the winner too. Push and an in-app row are easy to miss, and a
+    // prize somebody never noticed they had won is a support ticket.
+    const winnerSnap = await db2.collection(Collections.users).doc(params.userId).get();
+    const winnerData = winnerSnap.data();
+    for (const a of awarded) {
+      await queueEmail(winnerData?.email, "instant_win_notification", {
+        displayName: winnerData?.displayName ?? "Angler",
+        prizeName: a.prizeName,
+        entryNumber: String(a.entryNumber),
+        competitionTitle: (comp.title as string) ?? "a raffle",
+        settlement: a.prizeType === "credit"
+          ? `£${(a.valuePence / 100).toFixed(2)} of site credit has been added to your account already.`
+          : "We'll be in touch shortly to arrange getting the prize to you.",
+      });
+    }
   }
   return awarded;
 }

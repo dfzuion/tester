@@ -220,7 +220,7 @@ private fun ReviewStep(state: CheckoutState, viewModel: CheckoutViewModel) {
     if (state.alreadyHeld > 0) {
         Spacer(Modifier.height(8.dp))
         Text(
-            "You already hold ${state.alreadyHeld} entries in this raffle. The limit is ${competition.maxEntriesPerCustomer}.",
+            "You already hold ${state.alreadyHeld} entries in this raffle. The limit is ${competition.perCustomerLimit}.",
             style = MaterialTheme.typography.labelSmall,
             color = RrrColors.Mist,
         )
@@ -454,7 +454,7 @@ private fun PaymentStep(state: CheckoutState, viewModel: CheckoutViewModel) {
                 Text("Confirming with your bank", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Don't close the app. We're waiting for the payment to be confirmed on our side before issuing your numbers.",
+                    "Confirming your payment. Don't close the app.",
                     style = MaterialTheme.typography.bodySmall,
                     color = RrrColors.Mist,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -537,7 +537,7 @@ private fun CompleteStep(
 
     Spacer(Modifier.height(20.dp))
     Text(
-        "A confirmation email is on its way. You'll get a notification when this raffle is drawn, win or lose.",
+        "Confirmation email on its way. We'll notify you when it's drawn.",
         style = MaterialTheme.typography.bodySmall,
         color = RrrColors.Mist,
     )

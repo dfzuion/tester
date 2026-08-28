@@ -18,14 +18,14 @@ object RrrColors {
     /**
      * Khaki is the interface colour: chips, selected states, primary buttons.
      */
-    val Khaki = Color(0xFF8FA84E)
-    val KhakiBright = Color(0xFFBCD37B)
-    val KhakiDim = Color(0x3D8FA84E)
+    val Khaki = Color(0xFFA5C05C)
+    val KhakiBright = Color(0xFFC8DC90)
+    val KhakiDim = Color(0x3DA5C05C)
 
     /** Bronze-brown stays reserved for money and prizes, so it keeps its punch. */
-    val Gold = Color(0xFFA96A2C)
-    val GoldBright = Color(0xFFC98B45)
-    val GoldDim = Color(0x3DA96A2C)
+    val Gold = Color(0xFFC07934)
+    val GoldBright = Color(0xFFDB9A50)
+    val GoldDim = Color(0x3DC07934)
 
     val Bone = Color(0xFFF0EBDB)         // primary type
     val Mist = Color(0xFFACB196)         // secondary type

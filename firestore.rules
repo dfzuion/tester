@@ -110,7 +110,13 @@ service cloud.firestore {
     }
 
     match /winners/{id} {
-      allow get, list: if isAdmin() || resource.data.published == true;
+      // A customer can always see their own wins, published or not. Without
+      // this, "My wins" queried by winnerUserId with no published filter, and
+      // Firestore rejected the whole listing - so a win the admin had not yet
+      // published was invisible to the person who had won it.
+      allow get, list: if isAdmin()
+        || resource.data.published == true
+        || (signedIn() && resource.data.winnerUserId == request.auth.uid);
       allow write: if false;
     }
 

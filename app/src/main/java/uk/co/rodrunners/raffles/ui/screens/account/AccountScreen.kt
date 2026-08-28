@@ -62,6 +62,20 @@ import uk.co.rodrunners.raffles.BuildConfig
 import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrType
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
+import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 
 data class AccountAction(
     val label: String,
@@ -162,6 +176,14 @@ fun AccountScreen(
                 )
 
                 Spacer(Modifier.height(24.dp))
+                profile.referralCode?.let { code ->
+                    Spacer(Modifier.height(Dimens.sectionGap))
+                    SectionHeader("Invite a friend", Modifier.padding(horizontal = Dimens.gutter))
+                    Spacer(Modifier.height(Dimens.cardGap))
+                    ReferralCard(code)
+                    Spacer(Modifier.height(Dimens.sectionGap))
+                }
+
                 SectionHeader("Your account", Modifier.padding(horizontal = Dimens.gutter))
                 Spacer(Modifier.height(8.dp))
                 AccountGroup(
@@ -206,14 +228,6 @@ fun AccountScreen(
                     )
                 )
 
-                profile.referralCode?.let { code ->
-                    Spacer(Modifier.height(24.dp))
-                    Column(Modifier.padding(horizontal = Dimens.gutter)) {
-                        Text("Your referral code", style = MaterialTheme.typography.labelSmall, color = RrrColors.Slate)
-                        Spacer(Modifier.height(4.dp))
-                        Text(code, style = RrrType.Numeric, color = RrrColors.Gold)
-                    }
-                }
                 // The very first administrator has to get in somehow, and the
                 // Admin entry above only appears once you already are one.
                 // Long-pressing the version line opens the Administrators screen,
@@ -311,6 +325,66 @@ fun AccountGroup(actions: List<AccountAction>) {
                     Modifier.padding(start = 50.dp),
                     thickness = 1.dp,
                     color = RrrColors.Hairline,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The referral code, given its own card rather than a line of small print at
+ * the very bottom of the account page. Tapping copies it - a code you have to
+ * retype by hand from a phone screen is a code nobody shares.
+ */
+@Composable
+private fun ReferralCard(code: String) {
+    val clipboard = LocalClipboardManager.current
+    val haptics = LocalHapticFeedback.current
+    var copied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(copied) {
+        if (copied) { kotlinx.coroutines.delay(1800); copied = false }
+    }
+
+    Column(
+        Modifier
+            .padding(horizontal = Dimens.gutter)
+            .fillMaxWidth()
+            .shadow(10.dp, RrrShapes.large, clip = false)
+            .clip(RrrShapes.large)
+            .background(RrrColors.Surface)
+            .border(BorderStroke(1.dp, RrrColors.Hairline), RrrShapes.large)
+            .clickable {
+                clipboard.setText(AnnotatedString(code))
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                copied = true
+            }
+            .padding(18.dp),
+    ) {
+        Text(
+            "You both get £5 when they enter their first raffle.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = RrrColors.Mist,
+        )
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(code, style = RrrType.Numeric, color = RrrColors.Khaki)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
+                    contentDescription = null,
+                    tint = if (copied) RrrColors.Success else RrrColors.Gold,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (copied) "Copied" else "Tap to copy",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (copied) RrrColors.Success else RrrColors.Gold,
                 )
             }
         }

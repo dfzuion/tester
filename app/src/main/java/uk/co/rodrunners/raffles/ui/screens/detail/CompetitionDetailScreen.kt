@@ -173,7 +173,7 @@ fun CompetitionDetailScreen(
                         facts = listOfNotNull(
                             "Entries sold" to "${c.entriesSold} of ${c.maxEntries}",
                             "Closes" to if (c.closesAtMillis > 0) TimeFormat.full(c.closesAtMillis) else "—",
-                            "Limit per person" to "${c.maxEntriesPerCustomer} entries",
+                            "Limit per person" to "${c.perCustomerLimit} entries",
                             if (detail.myEntryCount > 0) "You hold" to "${detail.myEntryCount} entries" else null,
                             "Numbers issued" to if (c.allocationMode == "random") "At random" else "In sequence",
                             "Age" to "${c.minimumAge}+",
@@ -323,7 +323,7 @@ private fun EnterBar(
                 GoldButton("Entry limit reached", {}, Modifier.fillMaxWidth(), enabled = false)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "You hold the maximum ${c.maxEntriesPerCustomer} entries for this raffle.",
+                    "You hold the maximum ${c.perCustomerLimit} entries for this raffle.",
                     style = MaterialTheme.typography.labelSmall,
                     color = RrrColors.Mist,
                 )

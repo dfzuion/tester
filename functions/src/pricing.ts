@@ -40,6 +40,9 @@ export function bestBundlePrice(quantity: number, unitPricePence: number, bundle
   return { total, usedLabel };
 }
 
+/** Used when a raffle has no per-customer limit of its own. */
+export const DEFAULT_PER_CUSTOMER_LIMIT = 100;
+
 export async function computePrice(params: {
   competitionId: string;
   quantity: number;
@@ -53,8 +56,14 @@ export async function computePrice(params: {
 
   if (c.status !== "live") throw new HttpsError("failed-precondition", "This raffle is not open for entries.");
   if (params.quantity < 1) throw new HttpsError("invalid-argument", "Choose at least one entry.");
-  if (params.quantity > (c.maxEntriesPerCustomer ?? 100)) {
-    throw new HttpsError("failed-precondition", `The limit is ${c.maxEntriesPerCustomer} entries per person for this raffle.`);
+  // A stored 0 means "no limit set", not "nobody may enter". `?? 100` only
+  // catches null and undefined, so a raffle saved with the field left blank
+  // got a cap of zero and refused every entry with "entry limit reached".
+  const rawPerCustomer = Number(c.maxEntriesPerCustomer);
+  const perCustomer = Number.isFinite(rawPerCustomer) && rawPerCustomer > 0 ? rawPerCustomer : DEFAULT_PER_CUSTOMER_LIMIT;
+
+  if (params.quantity > perCustomer) {
+    throw new HttpsError("failed-precondition", `The limit is ${perCustomer} entries per person for this raffle.`);
   }
 
   // Enforce the per-customer cap across every previous order for this raffle.
@@ -63,9 +72,9 @@ export async function computePrice(params: {
     .where("userId", "==", params.userId)
     .count().get();
   const alreadyHeld = existing.data().count;
-  if (alreadyHeld + params.quantity > (c.maxEntriesPerCustomer ?? 100)) {
+  if (alreadyHeld + params.quantity > perCustomer) {
     throw new HttpsError("failed-precondition",
-      `You already hold ${alreadyHeld} entries. The limit is ${c.maxEntriesPerCustomer} per person.`);
+      `You already hold ${alreadyHeld} entries. The limit is ${perCustomer} per person.`);
   }
 
   const unit: number = c.entryPricePence;

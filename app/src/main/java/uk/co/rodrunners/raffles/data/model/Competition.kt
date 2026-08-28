@@ -40,6 +40,12 @@ data class Competition(
     val resultPublished: Boolean = false,
     val previousWinnerDisplayName: String? = null,
 ) {
+    /**
+     * A stored 0 means the raffle set no limit of its own, so the server
+     * default applies. Showing "0" to a customer read as "you may buy none".
+     */
+    val perCustomerLimit: Int get() = if (maxEntriesPerCustomer > 0) maxEntriesPerCustomer else 100
+
     val entriesRemaining: Int get() = (maxEntries - entriesSold).coerceAtLeast(0)
     val soldFraction: Float get() = if (maxEntries == 0) 0f else (entriesSold.toFloat() / maxEntries).coerceIn(0f, 1f)
     val closesAtMillis: Long get() = closesAt?.toDate()?.time ?: 0L

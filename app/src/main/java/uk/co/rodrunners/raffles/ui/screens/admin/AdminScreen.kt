@@ -107,7 +107,7 @@ fun AdminScreen(
                 if (stats.failedPayments > 0) {
                     item {
                         Text(
-                            "${stats.failedPayments} failed payment(s) recorded — reserved numbers from these were released automatically.",
+                            "${stats.failedPayments} failed payments. Their numbers were released.",
                             style = MaterialTheme.typography.bodySmall,
                             color = RrrColors.Warning,
                         )
@@ -152,8 +152,7 @@ fun AdminScreen(
                     SectionHeader("Demo data")
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Seeds demonstration raffles flagged isDemo. The function refuses to run against a " +
-                            "production project, so this cannot pollute live data.",
+                        "Adds demo raffles. Blocked on production projects.",
                         style = MaterialTheme.typography.bodySmall,
                         color = RrrColors.Mist,
                     )
@@ -199,8 +198,7 @@ fun AdminScreen(
                     Text("Winning entry ${draw.winningEntryNumber}", color = RrrColors.Gold, style = RrrType.Numeric)
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "${draw.eligibleEntryCount} eligible entries. Seed hash ${draw.seedHash.take(16)}… recorded in the audit log. " +
-                            "The result is not visible to customers until you publish it.",
+                        "${draw.eligibleEntryCount} eligible entries. Not visible to customers until published.",
                         color = RrrColors.Mist,
                         style = MaterialTheme.typography.bodySmall,
                     )
