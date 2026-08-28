@@ -31,16 +31,31 @@ export interface CreditMovement {
   metadata?: Record<string, unknown>;
 }
 
+/** A credit move that has done its reading and is waiting to be written. */
+export interface PreparedCreditMove {
+  /** The balance this movement will leave behind. */
+  balanceAfterPence: number;
+  /** Queues the balance update and the ledger row. Reads nothing. */
+  apply(tx: FirebaseFirestore.Transaction): void;
+}
+
 /**
- * Moves credit inside the caller's transaction. Every read the transaction
- * needs must happen before its first write, so this reads the user first.
+ * Reads what a credit movement needs and returns it ready to write.
+ *
+ * Firestore forbids a read after a write inside the same transaction, and
+ * moveCredit does both. That made it impossible to combine safely with any
+ * other read - paying with credit read the user, wrote the balance, and then
+ * allocateEntryNumbers tried to read the raffle, which aborted the whole
+ * transaction as INTERNAL. Splitting the phases lets a caller do every read
+ * first and then every write, which is the rule.
+ *
  * Refuses to let a balance go negative - a spend that cannot be covered is a
  * bug, and silently allowing it would hand out free entries.
  */
-export async function moveCredit(
+export async function prepareCreditMove(
   tx: FirebaseFirestore.Transaction,
   m: CreditMovement
-): Promise<number> {
+): Promise<PreparedCreditMove> {
   if (!Number.isInteger(m.deltaPence) || m.deltaPence === 0) {
     throw new HttpsError("invalid-argument", "Credit movements must be a non-zero whole number of pence.");
   }
@@ -55,20 +70,38 @@ export async function moveCredit(
     throw new HttpsError("failed-precondition", "That's more credit than the account holds.");
   }
 
-  tx.update(userRef, {
-    creditBalancePence: after,
-    creditUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  tx.set(userRef.collection("creditLedger").doc(), {
-    deltaPence: m.deltaPence,
+  return {
     balanceAfterPence: after,
-    reason: m.reason,
-    description: m.description,
-    orderId: m.orderId ?? null,
-    metadata: m.metadata ?? {},
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  return after;
+    apply(writeTx: FirebaseFirestore.Transaction) {
+      writeTx.update(userRef, {
+        creditBalancePence: after,
+        creditUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      writeTx.set(userRef.collection("creditLedger").doc(), {
+        deltaPence: m.deltaPence,
+        balanceAfterPence: after,
+        reason: m.reason,
+        description: m.description,
+        orderId: m.orderId ?? null,
+        metadata: m.metadata ?? {},
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    },
+  };
+}
+
+/**
+ * Reads and writes a credit movement in one go. Safe only when the caller has
+ * no further reads to make; if it does, use prepareCreditMove and apply it
+ * after the last read.
+ */
+export async function moveCredit(
+  tx: FirebaseFirestore.Transaction,
+  m: CreditMovement
+): Promise<number> {
+  const prepared = await prepareCreditMove(tx, m);
+  prepared.apply(tx);
+  return prepared.balanceAfterPence;
 }
 
 /** Convenience for callers that aren't already inside a transaction. */
@@ -294,20 +327,26 @@ export async function payReferralIfDue(params: {
     await db.runTransaction(async (tx) => {
       const fresh = await tx.get(referralRef);
       if (fresh.data()?.status === "rewarded") return;
-      await moveCredit(tx, {
+
+      // Both sides are read first, then both are written. Paying one and then
+      // reading the other aborted the transaction, so referral rewards were
+      // never actually landing.
+      const toReferrer = await prepareCreditMove(tx, {
         uid: referrerId,
         deltaPence: params.referrerRewardPence,
         reason: "referral",
         description: "Someone you referred made their first order",
         orderId: params.orderId,
       });
-      await moveCredit(tx, {
+      const toReferee = await prepareCreditMove(tx, {
         uid: params.userId,
         deltaPence: params.refereeRewardPence,
         reason: "referral",
         description: `Welcome bonus for using code ${referredBy}`,
         orderId: params.orderId,
       });
+      toReferrer.apply(tx);
+      toReferee.apply(tx);
       tx.update(referralRef, {
         status: "rewarded",
         rewardedAt: admin.firestore.FieldValue.serverTimestamp(),

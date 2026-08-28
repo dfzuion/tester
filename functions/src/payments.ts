@@ -4,7 +4,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import Stripe from "stripe";
 import { Collections, REGION, REFERRAL_REFERRER_PENCE, REFERRAL_REFEREE_PENCE, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ENFORCE_APP_CHECK } from "./config";
 import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
-import { moveCredit, moveCreditStandalone, payReferralIfDue } from "./credits";
+import { moveCredit, moveCreditStandalone, prepareCreditMove, payReferralIfDue } from "./credits";
 import { awardInstantWins } from "./instantwins";
 import { computePrice, validatePromotion } from "./pricing";
 import { writeAudit } from "./audit";
@@ -78,17 +78,21 @@ export const createOrderAndPaymentIntent = onCall(
     const amountDue = breakdown.totalPence - creditApplied;
 
     const numbers = await db.runTransaction(async (tx) => {
-      // Every read first: the credit move reads the user document.
-      if (creditApplied > 0) {
-        await moveCredit(tx, {
-          uid,
-          deltaPence: -creditApplied,
-          reason: "order_spend",
-          description: `Order ${orderNumber}`,
-          orderId: orderRef.id,
-        });
-      }
+      // Firestore will not allow a read after a write in the same
+      // transaction. The credit move reads the user and the allocation reads
+      // the raffle, so both reads happen here, and the credit is only written
+      // once allocateEntryNumbers has done its own reading.
+      const spend = creditApplied > 0
+        ? await prepareCreditMove(tx, {
+            uid,
+            deltaPence: -creditApplied,
+            reason: "order_spend",
+            description: `Order ${orderNumber}`,
+            orderId: orderRef.id,
+          })
+        : null;
       const alloc = await allocateEntryNumbers(tx, compRef, qty);
+      spend?.apply(tx);
       tx.set(orderRef, {
         orderNumber,
         userId: uid,
