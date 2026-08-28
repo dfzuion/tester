@@ -46,6 +46,14 @@ export {
   revokeAdmin,
 } from "./adminusers";
 
+export {
+  redeemCreditCoupon,
+  createCreditCoupon,
+  listCreditCoupons,
+  setCreditCouponActive,
+  grantCredit,
+} from "./credits";
+
 export { notifyEndingSoon } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";

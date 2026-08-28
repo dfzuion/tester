@@ -14,6 +14,10 @@ export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@r
 export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunnersraffles.co.uk" });
 export const REGION = "europe-west2"; // London
 
+/** What a referral pays once the referred customer's first order is paid. */
+export const REFERRAL_REFERRER_PENCE = 500;
+export const REFERRAL_REFEREE_PENCE = 500;
+
 /**
  * App Check proves a call came from the real app rather than a script. Release
  * builds get a token from Play Integrity; a debug build needs a debug token
@@ -33,6 +37,8 @@ export const Collections = {
   payments: "payments",
   winners: "winners",
   instantWins: "instantWins",
+  creditCoupons: "creditCoupons",
+  couponRedemptions: "couponRedemptions",
   draws: "draws",
   notifications: "notifications",
   favourites: "favourites",

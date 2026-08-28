@@ -9,7 +9,9 @@ export type AuditAction =
   | "winner.selected" | "result.published" | "account.suspended"
   | "admin.role.changed" | "content.updated" | "promotion.created"
   | "instantwin.added" | "instantwin.removed" | "instantwin.awarded"
-  | "instantwin.claim.updated";
+  | "instantwin.claim.updated"
+  | "credit.coupon.created" | "credit.coupon.updated" | "credit.coupon.redeemed"
+  | "credit.granted" | "credit.spent" | "credit.returned";
 
 export interface AuditParams {
   action: AuditAction;

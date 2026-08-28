@@ -2,8 +2,9 @@ import * as admin from "firebase-admin";
 import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import Stripe from "stripe";
-import { Collections, REGION, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ENFORCE_APP_CHECK } from "./config";
+import { Collections, REGION, REFERRAL_REFERRER_PENCE, REFERRAL_REFEREE_PENCE, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ENFORCE_APP_CHECK } from "./config";
 import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
+import { moveCredit, moveCreditStandalone, payReferralIfDue } from "./credits";
 import { awardInstantWins } from "./instantwins";
 import { computePrice, validatePromotion } from "./pricing";
 import { writeAudit } from "./audit";
@@ -40,7 +41,7 @@ export const createOrderAndPaymentIntent = onCall(
     await assertNotRateLimited(`checkout:${uid}`, 10, 60_000);
 
     const db = admin.firestore();
-    const { competitionId, quantity, promoCode, idempotencyKey } = req.data ?? {};
+    const { competitionId, quantity, promoCode, idempotencyKey, creditToApplyPence } = req.data ?? {};
     const qty = Number(quantity);
     if (!competitionId || !Number.isInteger(qty) || qty < 1) {
       throw new HttpsError("invalid-argument", "Choose how many entries you'd like.");
@@ -67,7 +68,26 @@ export const createOrderAndPaymentIntent = onCall(
     const orderNumber = await nextOrderNumber();
     const compRef = db.collection(Collections.competitions).doc(competitionId);
 
+    // Credit is reserved at the same moment as the entry numbers. Deducting it
+    // later would let two checkouts spend the same balance; deducting it here
+    // means an abandoned order has to give it back, which releaseReservation
+    // and the failure paths below both do.
+    const requestedCredit = Math.max(0, Math.floor(Number(creditToApplyPence ?? 0)));
+    const availableCredit = Math.max(0, Number(user.creditBalancePence ?? 0));
+    const creditApplied = Math.min(requestedCredit, availableCredit, breakdown.totalPence);
+    const amountDue = breakdown.totalPence - creditApplied;
+
     const numbers = await db.runTransaction(async (tx) => {
+      // Every read first: the credit move reads the user document.
+      if (creditApplied > 0) {
+        await moveCredit(tx, {
+          uid,
+          deltaPence: -creditApplied,
+          reason: "order_spend",
+          description: `Order ${orderNumber}`,
+          orderId: orderRef.id,
+        });
+      }
       const alloc = await allocateEntryNumbers(tx, compRef, qty);
       tx.set(orderRef, {
         orderNumber,
@@ -81,6 +101,8 @@ export const createOrderAndPaymentIntent = onCall(
         entryNumbers: alloc.numbers,
         breakdown,
         totalPence: breakdown.totalPence,
+        creditAppliedPence: creditApplied,
+        amountDuePence: amountDue,
         currency: "gbp",
         paymentStatus: "pending",
         orderStatus: "reserved",
@@ -92,9 +114,37 @@ export const createOrderAndPaymentIntent = onCall(
       return alloc.numbers;
     });
 
+    // Fully covered by credit: there is nothing for Stripe to do, so the order
+    // is settled here. This is the one place other than the webhook that may
+    // mark an order paid, and it can only do so because no card is involved.
+    if (amountDue === 0) {
+      await orderRef.update({
+        paymentStatus: "paid",
+        orderStatus: "confirmed",
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paidWith: "credit",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await settlePaidOrder(orderRef.id);
+      await writeAudit({
+        action: "order.created", actorId: uid, actorRole: "customer",
+        objectType: "order", objectId: orderRef.id,
+        newValue: { orderNumber, competitionId, quantity: qty, paidWithCreditPence: creditApplied },
+      });
+      return {
+        orderId: orderRef.id,
+        orderNumber,
+        clientSecret: null,
+        paidWithCredit: true,
+        creditAppliedPence: creditApplied,
+        breakdown,
+        entryNumbersPending: numbers.length,
+      };
+    }
+
     const intent = await stripe().paymentIntents.create(
       {
-        amount: breakdown.totalPence,
+        amount: amountDue,
         currency: "gbp",
         automatic_payment_methods: { enabled: true },
         metadata: { orderId: orderRef.id, userId: uid, competitionId, quantity: String(qty) },
@@ -119,6 +169,8 @@ export const createOrderAndPaymentIntent = onCall(
       orderId: orderRef.id,
       orderNumber,
       clientSecret: intent.client_secret,
+      paidWithCredit: false,
+      creditAppliedPence: creditApplied,
       publishableKeyHint: "Set STRIPE_PUBLISHABLE_KEY in local.properties",
       breakdown,
       entryNumbersPending: numbers.length,
@@ -187,7 +239,8 @@ async function handleSucceeded(intent: Stripe.PaymentIntent) {
     if (!snap.exists) return null;
     const o = snap.data()!;
     if (o.paymentStatus === "paid") return null; // already processed
-    if (intent.amount_received !== o.totalPence) {
+    const expectedPence = Number(o.amountDuePence ?? o.totalPence);
+    if (intent.amount_received !== expectedPence) {
       // Amount mismatch: never fulfil, flag for manual review.
       tx.update(orderRef, { paymentStatus: "review", orderStatus: "on_hold", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
       return null;
@@ -203,6 +256,23 @@ async function handleSucceeded(intent: Stripe.PaymentIntent) {
     return o;
   });
 
+  if (!result) return;
+
+  await settlePaidOrder(orderId, { paymentIntentId: intent.id, amountPence: intent.amount_received });
+}
+
+/**
+ * Everything that has to happen once an order is genuinely paid, whether that
+ * was a card or a credit balance. Kept in one place so the two payment routes
+ * can never drift apart and hand out entries on one path but not the other.
+ */
+async function settlePaidOrder(
+  orderId: string,
+  payment?: { paymentIntentId: string; amountPence: number | null }
+): Promise<void> {
+  const db = admin.firestore();
+  const snap = await db.collection(Collections.orders).doc(orderId).get();
+  const result = snap.data();
   if (!result) return;
 
   await materialiseEntries({
@@ -224,7 +294,7 @@ async function handleSucceeded(intent: Stripe.PaymentIntent) {
     orderId,
   });
   if (instantWins.length) {
-    await admin.firestore().collection(Collections.orders).doc(orderId).update({
+    await db.collection(Collections.orders).doc(orderId).update({
       instantWins: instantWins.map((w) => ({
         instantWinId: w.id,
         entryNumber: w.entryNumber,
@@ -237,10 +307,23 @@ async function handleSucceeded(intent: Stripe.PaymentIntent) {
 
   if (result.breakdown?.promoCode) await recordRedemption(result.breakdown.promoCode, result.userId, orderId);
 
+  // A referral only pays out once the referred customer has actually bought
+  // something, which is what stops people farming codes with empty accounts.
+  await payReferralIfDue({
+    userId: result.userId,
+    orderId,
+    referrerRewardPence: REFERRAL_REFERRER_PENCE,
+    refereeRewardPence: REFERRAL_REFEREE_PENCE,
+  });
+
   await writeAudit({
     action: "payment.confirmed", actorId: "system", actorRole: "system",
     objectType: "order", objectId: orderId,
-    newValue: { amountPence: intent.amount_received, paymentIntent: intent.id },
+    newValue: {
+      amountPence: payment?.amountPence ?? 0,
+      paymentIntent: payment?.paymentIntentId ?? null,
+      creditAppliedPence: result.creditAppliedPence ?? 0,
+    },
   });
 
   await createUserNotification(result.userId, {
@@ -272,6 +355,15 @@ async function handleFailedOrCancelled(intent: Stripe.PaymentIntent, status: "fa
     if (!snap.exists) return;
     const o = snap.data()!;
     if (o.paymentStatus === "paid" || o.orderStatus === "released") return;
+    // Credit was reserved when the order was created, so a dead order has to
+    // give it back - otherwise a failed card silently costs the customer.
+    const credit = Number(o.creditAppliedPence ?? 0);
+    if (credit > 0) {
+      await moveCredit(tx, {
+        uid: o.userId, deltaPence: credit, reason: "order_released",
+        description: `Order ${o.orderNumber} did not complete`, orderId: orderRef.id,
+      });
+    }
     const compRef = db.collection(Collections.competitions).doc(o.competitionId);
     await releaseReservation(tx, compRef, o.quantity);
     tx.update(orderRef, {
@@ -309,6 +401,24 @@ async function handleRefund(charge: Stripe.Charge) {
     const batch = db.batch();
     entries.forEach(d => batch.update(d.ref, { status: "void", voidReason: "refunded" }));
     await batch.commit();
+
+    // Stripe only ever refunds what Stripe took. Any part of the order paid
+    // with credit has to be returned as credit, or the customer is simply out
+    // of pocket for it.
+    const order = (await db.collection(Collections.orders).doc(orderId).get()).data();
+    const credit = Number(order?.creditAppliedPence ?? 0);
+    if (credit > 0 && order?.creditReturnedAt == null) {
+      await moveCreditStandalone({
+        uid: order!.userId,
+        deltaPence: credit,
+        reason: "order_refund",
+        description: `Refund of order ${order!.orderNumber}`,
+        orderId,
+      });
+      await db.collection(Collections.orders).doc(orderId).update({
+        creditReturnedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   await writeAudit({
@@ -354,6 +464,13 @@ export const releaseExpiredReservations = onSchedule(
         const fresh = await tx.get(doc.ref);
         const o = fresh.data();
         if (!o || o.orderStatus !== "reserved") return;
+        const credit = Number(o.creditAppliedPence ?? 0);
+        if (credit > 0) {
+          await moveCredit(tx, {
+            uid: o.userId, deltaPence: credit, reason: "order_released",
+            description: `Order ${o.orderNumber} expired before payment`, orderId: doc.ref.id,
+          });
+        }
         const compRef = db.collection(Collections.competitions).doc(o.competitionId);
         await releaseReservation(tx, compRef, o.quantity);
         tx.update(doc.ref, {

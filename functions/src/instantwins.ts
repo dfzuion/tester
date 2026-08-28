@@ -4,6 +4,7 @@ import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
 import { pushToUser, createUserNotification } from "./notifications";
+import { moveCreditStandalone } from "./credits";
 
 /**
  * INSTANT WINS
@@ -22,7 +23,14 @@ import { pushToUser, createUserNotification } from "./notifications";
  * won ones become visible, and only to the winner and the public feed.
  */
 
-interface PrizeSpec { prizeName: string; valuePence: number; imageUrl?: string; quantity: number }
+interface PrizeSpec {
+  prizeName: string;
+  valuePence: number;
+  imageUrl?: string;
+  quantity: number;
+  /** "credit" pays site credit straight into the winner's balance. */
+  prizeType: "item" | "credit";
+}
 
 function parseSpecs(raw: unknown): PrizeSpec[] {
   if (!Array.isArray(raw) || raw.length === 0) {
@@ -43,7 +51,11 @@ function parseSpecs(raw: unknown): PrizeSpec[] {
       throw new HttpsError("invalid-argument", `Prize ${i + 1}: quantity must be 1 to 5000.`);
     }
     const imageUrl = typeof p?.imageUrl === "string" ? p.imageUrl.trim() : "";
-    return { prizeName, valuePence, imageUrl, quantity };
+    const prizeType = p?.prizeType === "credit" ? "credit" as const : "item" as const;
+    if (prizeType === "credit" && valuePence < 1) {
+      throw new HttpsError("invalid-argument", `Prize ${i + 1}: a credit prize needs a value.`);
+    }
+    return { prizeName, valuePence, imageUrl, quantity, prizeType };
   });
 }
 
@@ -119,6 +131,7 @@ export const addInstantWinPrizes = onCall({ region: REGION, enforceAppCheck: ENF
         entryNumber,
         prizeName: spec.prizeName,
         valuePence: spec.valuePence,
+        prizeType: spec.prizeType,
         imageUrl: spec.imageUrl || null,
         status: "unclaimed",
         wonBy: null,
@@ -246,6 +259,7 @@ export interface AwardedInstantWin {
   prizeName: string;
   valuePence: number;
   imageUrl: string | null;
+  prizeType: "item" | "credit";
 }
 
 /**
@@ -285,6 +299,7 @@ export async function awardInstantWins(params: {
           prizeName: p.prizeName as string,
           valuePence: (p.valuePence as number) ?? 0,
           imageUrl: (p.imageUrl as string | null) ?? null,
+          prizeType: (p.prizeType === "credit" ? "credit" : "item") as "item" | "credit",
         };
       });
       if (prize) awarded.push(prize);
@@ -292,6 +307,26 @@ export async function awardInstantWins(params: {
       // A prize that fails to award must never fail the customer's order; the
       // entry is already theirs. It stays unclaimed and is picked up by audit.
       console.error("instant win award failed", { competitionId: params.competitionId, entryNumber: n, err });
+    }
+  }
+
+  // Credit prizes land in the balance immediately - there is nothing to post
+  // and nothing for an admin to do, so the claim is closed at the same time.
+  for (const win of awarded.filter((a) => a.prizeType === "credit")) {
+    try {
+      await moveCreditStandalone({
+        uid: params.userId,
+        deltaPence: win.valuePence,
+        reason: "instant_win",
+        description: `Instant win: ${win.prizeName}`,
+        orderId: params.orderId,
+        metadata: { instantWinId: win.id, entryNumber: win.entryNumber },
+      });
+      await db.collection(Collections.instantWins).doc(win.id)
+        .update({ claimStatus: "fulfilled", creditPaidAt: admin.firestore.FieldValue.serverTimestamp() });
+    } catch (err) {
+      // Leave it pending for an admin rather than losing the prize.
+      console.error("credit instant win payout failed", { instantWinId: win.id, err });
     }
   }
 

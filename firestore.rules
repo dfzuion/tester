@@ -81,6 +81,27 @@ service cloud.firestore {
      * are loaded would break the game. A won prize is readable by the person
      * who won it, and by anyone for the public "recent wins" feed.
      */
+    /**
+     * Credit is server-money: the balance lives on the user document and every
+     * movement is an immutable ledger row. Customers read their own ledger and
+     * nothing else; only the Admin SDK ever writes here.
+     */
+    match /users/{uid}/creditLedger/{entry} {
+      allow get, list: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    /** Coupon values and caps stay private - the app redeems through a function. */
+    match /creditCoupons/{code} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /couponRedemptions/{id} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
     match /instantWins/{id} {
       allow get, list: if isAdmin()
         || (resource.data.status == "won"
