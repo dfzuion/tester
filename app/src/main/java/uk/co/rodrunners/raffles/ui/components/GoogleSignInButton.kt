@@ -58,7 +58,7 @@ fun GoogleSignInButton(
     GoogleButton(
         text = text,
         onClick = {
-            if (busy) return@OutlineButton
+            if (busy) return@GoogleButton
             busy = true
             scope.launch {
                 try {
