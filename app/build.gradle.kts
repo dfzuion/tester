@@ -46,6 +46,22 @@ android {
     }
 
     signingConfigs {
+        // A fixed debug key. Android Studio's default keystore differs on every
+        // machine and CI generates a fresh one per build, so the SHA-1 would
+        // change constantly - and Google sign-in only works for fingerprints
+        // registered in Firebase. Checking one in keeps every debug build
+        // identical to Firebase's eyes. It is a debug key: it signs nothing
+        // that reaches Play.
+        getByName("debug") {
+            val shared = rootProject.file("keystore/debug.keystore")
+            if (shared.exists()) {
+                storeFile = shared
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+
         if (hasReleaseSigning) {
             create("release") {
                 storeFile = rootProject.file(releaseKeystorePath)
