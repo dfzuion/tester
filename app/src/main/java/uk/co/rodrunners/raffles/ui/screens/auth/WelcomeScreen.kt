@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +46,28 @@ fun WelcomeScreen(
             modifier = Modifier.fillMaxSize(),
         )
         Box(Modifier.fillMaxSize().background(RrrColors.ScrimBottom))
+        Box(Modifier.fillMaxSize().background(RrrColors.ScrimTop))
+
+        // The mark sits top centre and large - it is the first thing anyone
+        // sees, so it leads rather than being tucked in above the buttons.
+        Column(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(top = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Wordmark()
+            Spacer(Modifier.height(14.dp))
+            Text(
+                stringResource(R.string.brand_strapline),
+                style = MaterialTheme.typography.bodyMedium,
+                color = RrrColors.Bone,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = Dimens.gutter),
+            )
+        }
 
         Column(
             Modifier
@@ -54,15 +77,6 @@ fun WelcomeScreen(
                 .padding(horizontal = Dimens.gutter, vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Wordmark()
-            Spacer(Modifier.height(14.dp))
-            Text(
-                stringResource(R.string.brand_strapline),
-                style = MaterialTheme.typography.bodyMedium,
-                color = RrrColors.Mist,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(32.dp))
             GoldButton(
                 text = stringResource(R.string.action_browse),
                 onClick = onBrowse,

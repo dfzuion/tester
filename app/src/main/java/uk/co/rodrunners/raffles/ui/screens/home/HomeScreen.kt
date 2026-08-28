@@ -78,8 +78,15 @@ fun HomeScreen(
         topBar = {
           Box(Modifier.fillMaxWidth().background(RrrColors.Ink.copy(alpha = 0.72f))) {
             TopAppBar(
-                modifier = Modifier.height(74.dp),
-                title = { Wordmark(compact = true) },
+                modifier = Modifier.height(84.dp),
+                // Centred rather than left-aligned: with search and
+                // notifications on the right, a left-aligned mark looked like
+                // an afterthought squeezed into the corner.
+                title = {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Wordmark(compact = true)
+                    }
+                },
                 actions = {
                     IconButton(onClick = onOpenSearch) {
                         Icon(Icons.Outlined.Search, stringResource(R.string.cd_search), tint = RrrColors.Bone)

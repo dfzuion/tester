@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -58,6 +59,7 @@ fun CompetitionRow(
     Row(
         modifier
             .fillMaxWidth()
+            .shadow(10.dp, RrrShapes.large, clip = false)
             .clip(RrrShapes.large)
             .background(RrrColors.Surface)
             .border(BorderStroke(1.dp, RrrColors.Hairline), RrrShapes.large)
@@ -157,6 +159,7 @@ fun FeaturedCompetitionCard(
         modifier
             .fillMaxWidth()
             .aspectRatio(1.35f)
+            .shadow(10.dp, RrrShapes.large, clip = false)
             .clip(RrrShapes.large)
             .background(RrrColors.Surface)
             .border(BorderStroke(1.dp, RrrColors.Hairline), RrrShapes.large)
@@ -239,6 +242,7 @@ fun CompetitionTile(
     Column(
         modifier
             .width(168.dp)
+            .shadow(10.dp, RrrShapes.large, clip = false)
             .clip(RrrShapes.large)
             .background(RrrColors.Surface)
             .border(BorderStroke(1.dp, RrrColors.Hairline), RrrShapes.large)

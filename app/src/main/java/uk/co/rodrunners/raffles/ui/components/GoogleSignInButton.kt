@@ -1,15 +1,35 @@
 package uk.co.rodrunners.raffles.ui.components
 
 import android.content.Context
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import uk.co.rodrunners.raffles.R
+import uk.co.rodrunners.raffles.ui.theme.Dimens
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
@@ -35,7 +55,7 @@ fun GoogleSignInButton(
     val manager = remember(context) { CredentialManager.create(context) }
     var busy by remember { mutableStateOf(false) }
 
-    OutlineButton(
+    GoogleButton(
         text = text,
         onClick = {
             if (busy) return@OutlineButton
@@ -81,4 +101,50 @@ fun GoogleSignInButton(
         modifier = modifier,
         enabled = enabled && !busy,
     )
+}
+
+/**
+ * Google's sign-in button, to Google's own spec: their four-colour mark on a
+ * white surface, Roboto-weight label, mark left of centred text. The app's own
+ * khaki-and-bronze styling deliberately stops at this button - a recoloured
+ * Google mark is both against their brand terms and a thing people have learnt
+ * to distrust on a login screen.
+ */
+@Composable
+private fun GoogleButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.defaultMinSize(minHeight = Dimens.minTouchTarget),
+        enabled = enabled,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            contentColor = Color(0xFF1F1F1F),
+            disabledContainerColor = Color(0xFFE3E3E3),
+            disabledContentColor = Color(0xFF9A9A9A),
+        ),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_google),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+            )
+        }
+    }
 }

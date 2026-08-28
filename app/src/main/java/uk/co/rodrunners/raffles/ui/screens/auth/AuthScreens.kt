@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,8 +63,10 @@ private fun AuthScaffold(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
+            // The bar carries only the back arrow. The mark below it is the
+            // heading, which is why the title is not repeated up here.
             TopAppBar(
-                title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back", tint = RrrColors.Bone)
@@ -79,12 +82,41 @@ private fun AuthScaffold(
         Column(
             Modifier
                 .fillMaxSize()
-                
                 .padding(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Dimens.gutter),
-        ) { content() }
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Wordmark()
+            Spacer(Modifier.height(18.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = RrrColors.Bone,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Spacer(Modifier.height(26.dp))
+            Column(Modifier.fillMaxWidth()) { content() }
+        }
+    }
+}
+
+/** "or" between the password form and the Google button. */
+@Composable
+private fun OrDivider() {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HorizontalDivider(Modifier.weight(1f), color = RrrColors.Hairline)
+        Text(
+            "or",
+            style = MaterialTheme.typography.labelSmall,
+            color = RrrColors.Slate,
+            modifier = Modifier.padding(horizontal = 14.dp),
+        )
+        HorizontalDivider(Modifier.weight(1f), color = RrrColors.Hairline)
     }
 }
 
@@ -99,10 +131,6 @@ fun LoginScreen(
     val form by viewModel.form.collectAsStateWithLifecycle()
 
     AuthScaffold("Log in", onBack) {
-        Spacer(Modifier.height(12.dp))
-        Wordmark(Modifier.fillMaxWidth(), compact = true)
-        Spacer(Modifier.height(32.dp))
-
         RrrTextField(
             value = form.email,
             onValueChange = viewModel::onEmail,
@@ -134,7 +162,7 @@ fun LoginScreen(
             loading = form.submitting,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(12.dp))
+        OrDivider()
         GoogleSignInButton(
             onIdToken = { token -> viewModel.signInWithGoogle(token, onLoggedIn) },
             onError = { msg -> viewModel.showError("Google sign-in", msg) },
@@ -273,7 +301,7 @@ fun VerifyEmailScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Wordmark(compact = true)
+        Wordmark()
         Spacer(Modifier.height(28.dp))
         Text("Confirm your email", style = MaterialTheme.typography.headlineSmall, color = RrrColors.Bone)
         Spacer(Modifier.height(10.dp))
