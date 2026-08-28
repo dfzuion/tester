@@ -237,7 +237,9 @@ private fun confirmBody(action: String, competition: Competition) = when (action
     "publish" -> "${competition.title} becomes visible and enterable by customers."
     "pause" -> "Existing entries stand, but no new ones can be bought."
     "close" -> "No further entries can be bought for ${competition.title}. This can't be reversed."
-    "draw" -> "A winner is selected from ${competition.entriesSold} sold entries using a server-generated random seed. " +
+    "draw" -> (if (competition.status == "live" || competition.status == "paused")
+        "This closes the raffle straight away, then draws. " else "") +
+        "A winner is selected from ${competition.entriesSold} sold entries using a server-generated random seed. " +
         "The draw is recorded permanently and can't be re-run."
     else -> "Customers will see the winner and the winning number, and everyone who entered gets a notification."
 }
@@ -298,10 +300,16 @@ private fun AdminCompetitionCard(
             when (competition.status) {
                 "draft", "scheduled" -> OutlineButton("Make live", { onAction("publish") }, enabled = !busy)
                 "live" -> {
+                    // Drawing is allowed while the raffle is still open; the
+                    // server closes it as part of the draw.
+                    GoldButton("Draw now", { onAction("draw") }, enabled = !busy)
                     OutlineButton("Pause", { onAction("pause") }, enabled = !busy)
                     OutlineButton("Close entries", { onAction("close") }, enabled = !busy)
                 }
-                "paused" -> OutlineButton("Resume", { onAction("publish") }, enabled = !busy)
+                "paused" -> {
+                    GoldButton("Draw now", { onAction("draw") }, enabled = !busy)
+                    OutlineButton("Resume", { onAction("publish") }, enabled = !busy)
+                }
                 "closed" -> GoldButton("Draw winner", { onAction("draw") }, enabled = !busy)
                 "drawn" -> GoldButton("Publish result", { onAction("publish_result") }, enabled = !busy)
                 else -> Unit

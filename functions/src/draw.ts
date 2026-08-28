@@ -5,7 +5,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
-import { queueEmail, pushToUser, createUserNotification, pushToTopic } from "./notifications";
+import { queueEmail, pushToUser, createUserNotification, pushToTopic, notifyAdmins } from "./notifications";
 
 /**
  * WINNER SELECTION
@@ -59,8 +59,28 @@ export const drawWinner = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_
   const compSnap = await compRef.get();
   if (!compSnap.exists) throw new HttpsError("not-found", "Raffle not found.");
   const c = compSnap.data()!;
-  if (c.status !== "closed") throw new HttpsError("failed-precondition", "Close the raffle before drawing.");
   if (c.winnerId) throw new HttpsError("failed-precondition", "A winner has already been drawn.");
+  if (c.status === "drawn") throw new HttpsError("failed-precondition", "This raffle has already been drawn.");
+  if (c.status === "cancelled") throw new HttpsError("failed-precondition", "This raffle was cancelled.");
+
+  // Drawing early is a legitimate thing to want to do - a raffle can be drawn
+  // before it sells out or before its closing time. Requiring a separate
+  // "close" first meant an admin could only ever draw a raffle they had
+  // remembered to close, so closing is folded in here when it is still open.
+  if (c.status !== "closed") {
+    await compRef.update({
+      status: "closed",
+      closedAt: admin.firestore.FieldValue.serverTimestamp(),
+      closedBy: ctx.uid,
+      closeReason: "closed automatically to draw early",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await writeAudit({
+      action: "competition.closed", actorId: ctx.uid, actorRole: "admin",
+      objectType: "competition", objectId: competitionId,
+      previousValue: { status: c.status }, newValue: { status: "closed", viaDraw: true },
+    });
+  }
 
   // Eligible = paid, not refunded, not void, belongs to a non-suspended account.
   const entriesSnap = await db.collection(Collections.entries)
@@ -118,6 +138,7 @@ export const drawWinner = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_
       prizeName: c.prizeName ?? c.title,
       prizeImageUrl: c.heroImageUrl ?? null,
       drawId: drawRef.id,
+      winType: "draw",
       winningEntryNumber: winner.entryNumber,
       winnerUserId: winner.userId,
       winnerDisplayName: publicName(winner.userDisplayName, c.winnerNameDisplay ?? "first_name_last_initial"),
@@ -145,6 +166,12 @@ export const drawWinner = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_
   });
 
   await notifyWinner(winner.userId, c, winner.entryNumber, winnerRef.id);
+  await notifyAdmins(
+    "Winner drawn",
+    `${winner.userDisplayName} won ${c.prizeName ?? c.title} with entry ${winner.entryNumber}. ` +
+      `${eligible.length} eligible entries. The prize needs arranging.`,
+    { deepLink: `rrr://admin/competition/${competitionId}`, competitionId }
+  );
   if (publishImmediately) await publishResultInternal(competitionId, ctx.uid);
 
   return { drawId: drawRef.id, winnerId: winnerRef.id, winningEntryNumber: winner.entryNumber, eligibleEntryCount: eligible.length, seedHash };

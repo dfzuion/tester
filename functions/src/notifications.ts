@@ -10,7 +10,7 @@ import { Collections, FROM_EMAIL, REGION } from "./config";
  */
 
 export interface UserNotification {
-  category: "purchase" | "win" | "ending_soon" | "new_competition" | "promotion" | "account" | "payment" | "refund" | "support";
+  category: "purchase" | "win" | "ending_soon" | "new_competition" | "promotion" | "account" | "payment" | "refund" | "support" | "admin";
   title: string;
   body: string;
   deepLink?: string;
@@ -132,3 +132,28 @@ export const notifyEndingSoon = onSchedule({ region: REGION, schedule: "every 30
     await doc.ref.update({ endingSoonNotified: true });
   }
 });
+
+/**
+ * Tells every active administrator that something needs their attention.
+ * Wins were going only to the customer, so nobody on the business side knew a
+ * prize had to be posted until someone happened to look at the admin panel.
+ * Failures here never propagate - a notification must not undo a win.
+ */
+export async function notifyAdmins(
+  title: string,
+  body: string,
+  data: Record<string, string> = {}
+): Promise<void> {
+  try {
+    const db = admin.firestore();
+    const admins = await db.collection(Collections.adminUsers).where("active", "==", true).get();
+    await Promise.all(admins.docs.map(async (d) => {
+      await createUserNotification(d.id, { category: "admin", title, body, deepLink: data.deepLink });
+      await pushToUser(d.id, "admin", title, body, data);
+      const email = d.data().email as string | undefined;
+      if (email) await queueEmail(email, "admin_alert", { title, body });
+    }));
+  } catch (err) {
+    console.error("admin notification failed", { title, err });
+  }
+}

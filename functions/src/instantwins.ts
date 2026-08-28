@@ -3,7 +3,8 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import { Collections, REGION, ENFORCE_APP_CHECK } from "./config";
 import { requireAdmin } from "./guards";
 import { writeAudit } from "./audit";
-import { pushToUser, createUserNotification } from "./notifications";
+import { pushToUser, createUserNotification, notifyAdmins } from "./notifications";
+import { publicName } from "./draw";
 import { moveCreditStandalone } from "./credits";
 
 /**
@@ -332,6 +333,47 @@ export async function awardInstantWins(params: {
 
   if (awarded.length) {
     const total = awarded.reduce((sum, a) => sum + a.valuePence, 0);
+
+    // Instant wins belong in the winners feed alongside drawn winners.
+    // They were only ever written to the instantWins collection, so they never
+    // appeared in anybody's win history.
+    const db2 = admin.firestore();
+    const compSnap = await db2.collection(Collections.competitions).doc(params.competitionId).get();
+    const comp = compSnap.data() ?? {};
+    await Promise.all(awarded.map((a) =>
+      db2.collection(Collections.winners).add({
+        competitionId: params.competitionId,
+        competitionTitle: (comp.title as string) ?? "Instant win",
+        prizeName: a.prizeName,
+        prizeImageUrl: a.imageUrl ?? (comp.heroImageUrl as string | null) ?? null,
+        drawId: "",
+        winType: "instant_win",
+        prizeType: a.prizeType,
+        prizeValuePence: a.valuePence,
+        winningEntryNumber: a.entryNumber,
+        winnerUserId: params.userId,
+        winnerDisplayName: publicName(
+          params.userDisplayName,
+          (comp.winnerNameDisplay as string) ?? "first_name_last_initial"
+        ),
+        instantWinId: a.id,
+        orderId: params.orderId,
+        published: true,
+        drawnAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+    ));
+
+    // And the people who have to post the prize need to hear about it.
+    const itemPrizes = awarded.filter((a) => a.prizeType !== "credit");
+    if (itemPrizes.length) {
+      await notifyAdmins(
+        "Instant win to fulfil",
+        `${params.userDisplayName} won ${itemPrizes.map((a) => a.prizeName).join(", ")} on ${
+          (comp.title as string) ?? "a raffle"
+        }. Order ${params.orderId}.`,
+        { deepLink: `rrr://admin/orders/${params.orderId}`, orderId: params.orderId }
+      );
+    }
     await writeAudit({
       action: "instantwin.awarded",
       actorId: "system", actorRole: "system",

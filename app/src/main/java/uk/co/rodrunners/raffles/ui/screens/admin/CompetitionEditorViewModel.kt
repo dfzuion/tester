@@ -38,9 +38,27 @@ class CompetitionEditorViewModel @Inject constructor(
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
 
-    /** Called once with the route argument; null id means a brand new raffle. */
+    /**
+     * Called with the route argument; null id means a brand new raffle.
+     *
+     * This used to return early for null, which left whatever the last raffle
+     * had put in state - including its competitionId. Opening "New raffle" a
+     * second time therefore showed the previous raffle and saving it called
+     * update on that one, so only the first raffle could ever be created.
+     * Tracking what we last initialised for makes a null argument reset.
+     */
+    private var initialised = false
+    private var initialisedFor: String? = null
+
     fun start(competitionId: String?) {
-        if (competitionId == null || _state.value.competitionId == competitionId) return
+        if (initialised && initialisedFor == competitionId) return
+        initialised = true
+        initialisedFor = competitionId
+        if (competitionId == null) {
+            _state.value = EditorState()
+            return
+        }
+        if (_state.value.competitionId == competitionId) return
         _state.update { it.copy(loading = true, competitionId = competitionId) }
         viewModelScope.launch {
             runCatching { admin.manageableCompetitions().first { it.id == competitionId } }
