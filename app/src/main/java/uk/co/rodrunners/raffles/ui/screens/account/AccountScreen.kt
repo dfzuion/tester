@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Redeem
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -186,6 +187,12 @@ fun AccountScreen(
                         AccountAction("Privacy policy", Icons.Outlined.PrivacyTip, onClick = { onOpenLegal("privacy") }),
                         AccountAction("Company information", Icons.Outlined.Description, onClick = { onOpenLegal("company") }),
                         if (state.isAdmin) AccountAction("Admin", Icons.Outlined.AdminPanelSettings, onOpenAdmin) else null,
+                        // Staging is the build you test with, so the way in is a
+                        // visible row rather than a hidden gesture. Production
+                        // builds only show it once you actually are an admin.
+                        if (!state.isAdmin && BuildConfig.FLAVOR == "staging") {
+                            AccountAction("Admin setup", Icons.Outlined.Key, onOpenAdminUsers)
+                        } else null,
                     )
                 )
 
