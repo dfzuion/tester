@@ -54,9 +54,19 @@ jobs:
       - name: Write the config parameters
         env:
           PROJECT: rod-runners-raffles
+          RRR_ENFORCE_APP_CHECK: ${{ inputs.enforceAppCheck }}
         run: |
-          printf 'SUPPORT_EMAIL=support@rodrunnersraffles.co.uk\nFROM_EMAIL=no-reply@rodrunnersraffles.co.uk\n' \
-            > "functions/.env.$PROJECT"
+          # RRR_ENFORCE_APP_CHECK has to live in the dotenv file, not just in
+          # this step's shell. Shell variables reach the CLI process only; the
+          # deployed function reads its environment from here. Setting it as a
+          # step env var meant the flag never arrived, ENFORCE_APP_CHECK fell
+          # back to its default of true, and every callable rejected the app
+          # with UNAUTHENTICATED.
+          {
+            printf 'SUPPORT_EMAIL=support@rodrunnersraffles.co.uk\n'
+            printf 'FROM_EMAIL=no-reply@rodrunnersraffles.co.uk\n'
+            printf 'RRR_ENFORCE_APP_CHECK=%s\n' "$RRR_ENFORCE_APP_CHECK"
+          } > "functions/.env.$PROJECT"
           cat "functions/.env.$PROJECT"
 
       - name: Deploy

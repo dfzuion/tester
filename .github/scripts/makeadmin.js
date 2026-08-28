@@ -37,6 +37,18 @@ const ROLE = "super_admin";
     updatedBy: user.uid,
   }, { merge: true });
 
+  // Read it back, so the log proves what the server actually holds rather
+  // than what we intended to write.
+  const after = await admin.auth().getUser(user.uid);
+  const doc = await admin.firestore().collection("adminUsers").doc(user.uid).get();
+  console.log("");
+  console.log("--- verification ---");
+  console.log("custom claims : " + JSON.stringify(after.customClaims || {}));
+  console.log("adminUsers doc: " + (doc.exists
+    ? JSON.stringify({ role: doc.data().role, active: doc.data().active })
+    : "MISSING"));
+  const ok = (after.customClaims || {}).role === ROLE && doc.exists && doc.data().active === true;
+  console.log("gate would pass: " + (ok ? "YES" : "NO"));
   console.log("");
   console.log("=== DONE ===");
   console.log(EMAIL + " is now Super Admin.");
