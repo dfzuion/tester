@@ -99,7 +99,7 @@ fun RodRunnersTheme(content: @Composable () -> Unit) {
             Modifier
                 .fillMaxSize()
                 
-                .camoTexture(0.13f)
+                .camoTexture(0.22f)
         ) { content() }
     }
 }

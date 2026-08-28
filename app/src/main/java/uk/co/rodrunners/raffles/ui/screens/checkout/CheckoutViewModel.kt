@@ -61,7 +61,19 @@ data class CheckoutState(
     val alreadyHeld: Int = 0,
     val savingDetails: Boolean = false,
     val detailsError: AppError? = null,
+    /** Whether the customer wants their balance put towards this order. */
+    val useCredit: Boolean = true,
 ) {
+    val creditAvailablePence: Int get() = profile?.creditBalancePence ?: 0
+
+    /** Never more than the order is worth - the rest stays in the balance. */
+    val creditToApplyPence: Int
+        get() = if (!useCredit) 0
+        else minOf(creditAvailablePence, breakdown?.totalPence ?: 0)
+
+    val amountDuePence: Int get() = (breakdown?.totalPence ?: 0) - creditToApplyPence
+    val paidEntirelyWithCredit: Boolean get() = breakdown != null && amountDuePence == 0
+
     /** Once the order exists, backing out would strand a reservation. */
     val canGoBack: Boolean
         get() = when (step) {
@@ -124,6 +136,8 @@ class CheckoutViewModel @Inject constructor(
         _state.value = _state.value.copy(quantity = capped)
         requestQuote()
     }
+
+    fun setUseCredit(v: Boolean) { _state.value = _state.value.copy(useCredit = v) }
 
     fun onPromoInput(code: String) {
         _state.value = _state.value.copy(promoInput = code.uppercase())
@@ -204,13 +218,21 @@ class CheckoutViewModel @Inject constructor(
                     competitionId = competitionId,
                     quantity = s.quantity,
                     promoCode = s.promoInput.ifBlank { null },
+                    creditToApplyPence = s.creditToApplyPence,
                     idempotencyKey = idempotencyKey,
                 )
+                val secret = created.clientSecret
+                val coveredByCredit = created.paidWithCredit || secret == null
                 _state.value = _state.value.copy(
                     orderId = created.orderId,
                     breakdown = created.breakdown,
-                    phase = PaymentPhase.SheetReady(created.clientSecret),
+                    phase = if (coveredByCredit) PaymentPhase.AwaitingConfirmation
+                    else PaymentPhase.SheetReady(secret!!),
                 )
+                // Credit covered the lot, so there is no card sheet to show. The
+                // server already settled it; wait on the order document exactly
+                // as we would after a card payment rather than assuming success.
+                if (coveredByCredit) onSheetCompleted()
             } catch (t: Throwable) {
                 _state.value = _state.value.copy(phase = PaymentPhase.Failed(Errors.from(t)))
             }

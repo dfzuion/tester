@@ -120,8 +120,26 @@ fun InstantWinsScreen(
                 }
             }
             item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("A prize to post", state.newPrizeType == "item",
+                        onClick = { viewModel.onPrizeType("item") })
+                    Chip("Site credit", state.newPrizeType == "credit",
+                        onClick = { viewModel.onPrizeType("credit") })
+                }
+            }
+            if (state.newPrizeType == "credit") {
+                item {
+                    Text(
+                        "Credit lands in the winner's balance the moment they buy the ticket - nothing to post, nothing to chase.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = RrrColors.Mist,
+                    )
+                }
+            }
+
+            item {
                 GoldButton(
-                    text = "Hide them in the raffle",
+                    text = if (state.newPrizeType == "credit") "Hide the credit in the raffle" else "Hide them in the raffle",
                     onClick = { viewModel.addPrizes() },
                     enabled = state.canAdd,
                     loading = state.busy,

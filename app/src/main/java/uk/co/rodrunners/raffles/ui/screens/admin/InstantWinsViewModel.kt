@@ -21,13 +21,15 @@ data class InstantWinsState(
     val newPrizeName: String = "",
     val newPrizeValuePence: Int = 0,
     val newPrizeQuantity: Int = 1,
+    val newPrizeType: String = "item",
     val loading: Boolean = true,
     val busy: Boolean = false,
     val message: String? = null,
     val error: AppError? = null,
 ) {
     val canAdd: Boolean
-        get() = newPrizeName.trim().length >= 2 && newPrizeQuantity in 1..5000 && !busy
+        get() = newPrizeName.trim().length >= 2 && newPrizeQuantity in 1..5000 && !busy &&
+            (newPrizeType != "credit" || newPrizeValuePence > 0)
 }
 
 @HiltViewModel
@@ -58,6 +60,7 @@ class InstantWinsViewModel @Inject constructor(
     fun onName(v: String) = _state.update { it.copy(newPrizeName = v, error = null) }
     fun onValuePence(v: Int) = _state.update { it.copy(newPrizeValuePence = v) }
     fun onQuantity(v: Int) = _state.update { it.copy(newPrizeQuantity = v) }
+    fun onPrizeType(v: String) = _state.update { it.copy(newPrizeType = v) }
 
     fun addPrizes() {
         val s = _state.value
@@ -65,9 +68,18 @@ class InstantWinsViewModel @Inject constructor(
         act {
             val added = admin.addInstantWins(
                 s.competitionId,
-                listOf(InstantWinStock(s.newPrizeName.trim(), s.newPrizeValuePence, s.newPrizeQuantity)),
+                listOf(
+                    InstantWinStock(
+                        prizeName = s.newPrizeName.trim(),
+                        valuePence = s.newPrizeValuePence,
+                        count = s.newPrizeQuantity,
+                        prizeType = s.newPrizeType,
+                    )
+                ),
             )
-            _state.update { it.copy(newPrizeName = "", newPrizeValuePence = 0, newPrizeQuantity = 1) }
+            _state.update {
+                it.copy(newPrizeName = "", newPrizeValuePence = 0, newPrizeQuantity = 1, newPrizeType = "item")
+            }
             "$added prize${if (added == 1) "" else "s"} hidden among the unsold numbers."
         }
     }

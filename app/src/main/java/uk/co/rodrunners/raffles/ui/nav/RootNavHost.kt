@@ -23,8 +23,10 @@ import uk.co.rodrunners.raffles.ui.screens.account.PaymentMethodsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
+import uk.co.rodrunners.raffles.ui.screens.credit.CreditScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminUsersScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
+import uk.co.rodrunners.raffles.ui.screens.admin.CouponsScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.InstantWinsScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.ForgotPasswordScreen
 import uk.co.rodrunners.raffles.ui.screens.auth.LoginScreen
@@ -182,6 +184,7 @@ fun RootNavHost(
         composable(Routes.ACCOUNT) {
             AccountScreen(
                 onOpenAdminUsers = { navController.navigate(Routes.ADMIN_USERS) },
+                onOpenCredit = { navController.navigate(Routes.CREDIT) },
                 onOpenTickets = { navController.navigate(Routes.TICKETS) },
                 onOpenOrders = { navController.navigate(Routes.ORDERS) },
                 onOpenWins = { navController.navigate(Routes.RESULTS) },
@@ -342,7 +345,16 @@ fun RootNavHost(
                 onEditCompetition = { navController.navigate(Routes.adminEditCompetition(it)) },
                 onOpenInstantWins = { navController.navigate(Routes.adminInstantWins(it)) },
                 onOpenAdminUsers = { navController.navigate(Routes.ADMIN_USERS) },
+                onOpenCoupons = { navController.navigate(Routes.ADMIN_COUPONS) },
             )
+        }
+
+        composable(Routes.CREDIT) {
+            CreditScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.ADMIN_COUPONS) {
+            CouponsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.ADMIN_USERS) {

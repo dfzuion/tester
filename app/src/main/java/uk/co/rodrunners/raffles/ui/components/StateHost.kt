@@ -29,6 +29,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import uk.co.rodrunners.raffles.core.AppError
 import uk.co.rodrunners.raffles.core.UiState
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import uk.co.rodrunners.raffles.R
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 
 /**
@@ -67,6 +71,16 @@ fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // The empty state is the first thing a new customer sees, so it carries
+        // the brand rather than apologising in plain text.
+        Image(
+            painter = painterResource(R.drawable.logo_full),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            alpha = 0.85f,
+            modifier = Modifier.fillMaxWidth(0.62f),
+        )
+        Spacer(Modifier.height(18.dp))
         GoldRule(width = 28.dp)
         Spacer(Modifier.height(20.dp))
         Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, color = RrrColors.Bone, textAlign = TextAlign.Center)

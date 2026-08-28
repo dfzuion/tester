@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Redeem
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,6 +58,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.ExperimentalFoundationApi
 import uk.co.rodrunners.raffles.BuildConfig
+import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrType
 
@@ -71,6 +73,7 @@ data class AccountAction(
 @Composable
 fun AccountScreen(
     onOpenAdminUsers: () -> Unit = {},
+    onOpenCredit: () -> Unit = {},
     onOpenTickets: () -> Unit,
     onOpenOrders: () -> Unit,
     onOpenWins: () -> Unit,
@@ -148,6 +151,12 @@ fun AccountScreen(
                         AccountAction("My orders", Icons.Outlined.ReceiptLong, onOpenOrders),
                         AccountAction("My wins", Icons.Outlined.EmojiEvents, onOpenWins),
                         AccountAction("Saved raffles", Icons.Outlined.Bookmark, onOpenFavourites),
+                        AccountAction(
+                            "My credit",
+                            Icons.Outlined.Redeem,
+                            onOpenCredit,
+                            trailing = Money.format(profile.creditBalancePence),
+                        ),
                     )
                 )
 

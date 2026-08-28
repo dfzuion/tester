@@ -168,6 +168,7 @@ class AdminRepository @Inject constructor(
                         "prizeName" to it.prizeName.trim(),
                         "valuePence" to it.valuePence,
                         "quantity" to it.count,
+                        "prizeType" to it.prizeType,
                     )
                 },
             )

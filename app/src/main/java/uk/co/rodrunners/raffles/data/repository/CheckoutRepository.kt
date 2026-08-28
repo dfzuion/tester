@@ -11,8 +11,11 @@ import uk.co.rodrunners.raffles.data.model.PriceBreakdown
 data class CreatedOrder(
     val orderId: String,
     val orderNumber: String,
-    val clientSecret: String,
+    /** Null when credit covered the whole order and no card was needed. */
+    val clientSecret: String?,
     val breakdown: PriceBreakdown,
+    val paidWithCredit: Boolean = false,
+    val creditAppliedPence: Int = 0,
 )
 
 /**
@@ -40,6 +43,7 @@ class CheckoutRepository @Inject constructor(
         competitionId: String,
         quantity: Int,
         promoCode: String?,
+        creditToApplyPence: Int = 0,
         idempotencyKey: String = UUID.randomUUID().toString(),
     ): CreatedOrder {
         val result = functions.getHttpsCallable(Functions.CREATE_ORDER)
@@ -48,6 +52,7 @@ class CheckoutRepository @Inject constructor(
                     "competitionId" to competitionId,
                     "quantity" to quantity,
                     "promoCode" to promoCode,
+                    "creditToApplyPence" to creditToApplyPence,
                     "idempotencyKey" to idempotencyKey,
                 )
             ).await()
@@ -55,8 +60,10 @@ class CheckoutRepository @Inject constructor(
         return CreatedOrder(
             orderId = map["orderId"] as String,
             orderNumber = map["orderNumber"] as? String ?: "",
-            clientSecret = map["clientSecret"] as String,
+            clientSecret = map["clientSecret"] as? String,
             breakdown = parseBreakdown(map["breakdown"] as Map<*, *>),
+            paidWithCredit = map["paidWithCredit"] as? Boolean ?: false,
+            creditAppliedPence = (map["creditAppliedPence"] as? Number)?.toInt() ?: 0,
         )
     }
 

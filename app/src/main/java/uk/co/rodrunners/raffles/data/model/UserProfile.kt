@@ -16,6 +16,8 @@ data class UserProfile(
     val marketingOptIn: Boolean = false,
     val suspended: Boolean = false,
     val referralCode: String? = null,
+    /** Promotional balance, in pence. Buys entries; never withdrawable. */
+    val creditBalancePence: Int = 0,
     val referredBy: String? = null,
     val notificationPreferences: Map<String, Boolean> = emptyMap(),
     val createdAt: Timestamp? = null,

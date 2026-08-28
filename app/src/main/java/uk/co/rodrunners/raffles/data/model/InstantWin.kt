@@ -17,6 +17,8 @@ data class InstantWinStock(
     val prizeName: String = "",
     val valuePence: Int = 0,
     val count: Int = 0,
+    /** "credit" pays straight into the winner's balance; "item" is posted out. */
+    val prizeType: String = "item",
 )
 
 /** Admin view: a prize that has been won, and where its claim has got to. */

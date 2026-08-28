@@ -26,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -228,7 +230,7 @@ private fun ReviewStep(state: CheckoutState, viewModel: CheckoutViewModel) {
     PromoField(state, viewModel)
 
     Spacer(Modifier.height(24.dp))
-    PriceSummary(state)
+    PriceSummary(state, viewModel)
 }
 
 @Composable
@@ -252,7 +254,7 @@ private fun PromoField(state: CheckoutState, viewModel: CheckoutViewModel) {
 
 /** Figures come from the server's breakdown. No quote, no total. */
 @Composable
-private fun PriceSummary(state: CheckoutState) {
+private fun PriceSummary(state: CheckoutState, viewModel: CheckoutViewModel? = null) {
     val b: PriceBreakdown? = state.breakdown
     Column(
         Modifier
@@ -293,9 +295,57 @@ private fun PriceSummary(state: CheckoutState) {
         }
         if (b.feePence > 0) SummaryLine("Booking fee", Money.format(b.feePence))
 
+        // Credit is offered only when there is some, and never silently: the
+        // customer sees exactly how much of it this order would use.
+        if (state.creditAvailablePence > 0) {
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(thickness = 1.dp, color = RrrColors.Hairline)
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Use my credit",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = RrrColors.Bone,
+                    )
+                    Text(
+                        "${Money.format(state.creditAvailablePence)} available",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = RrrColors.Mist,
+                    )
+                }
+                Switch(
+                    checked = state.useCredit,
+                    onCheckedChange = { viewModel?.setUseCredit(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = RrrColors.Gold,
+                        checkedThumbColor = RrrColors.Ink,
+                    ),
+                )
+            }
+            if (state.creditToApplyPence > 0) {
+                SummaryLine(
+                    "Credit applied",
+                    "−${Money.format(state.creditToApplyPence)}",
+                    valueColour = RrrColors.Success,
+                )
+            }
+        }
+
         Spacer(Modifier.height(10.dp))
         HorizontalDivider(thickness = 1.dp, color = RrrColors.Hairline)
         Spacer(Modifier.height(10.dp))
+        if (state.creditToApplyPence > 0) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    if (state.paidEntirelyWithCredit) "Nothing to pay" else "To pay now",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = RrrColors.Bone,
+                )
+                Text(Money.format(state.amountDuePence), style = RrrType.Numeric, color = RrrColors.Gold)
+            }
+            Spacer(Modifier.height(6.dp))
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Total", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)
             Text(
@@ -358,7 +408,7 @@ private fun DetailsStep(state: CheckoutState, viewModel: CheckoutViewModel) {
 private fun ConfirmStep(state: CheckoutState, viewModel: CheckoutViewModel, onOpenRules: () -> Unit) {
     val c = state.competition ?: return
     Spacer(Modifier.height(8.dp))
-    PriceSummary(state)
+    PriceSummary(state, viewModel)
     Spacer(Modifier.height(24.dp))
     Text("Before you pay", style = MaterialTheme.typography.titleMedium, color = RrrColors.Bone)
     Spacer(Modifier.height(12.dp))

@@ -16,6 +16,7 @@ object Collections {
     const val PROMOTIONS = "promotions"
     const val AUDIT_LOGS = "auditLogs"
     const val INSTANT_WINS = "instantWins"
+    const val CREDIT_LEDGER = "creditLedger"
 }
 
 object Functions {
@@ -45,6 +46,11 @@ object Functions {
     const val LIST_ADMIN_USERS = "listAdminUsers"
     const val GRANT_ADMIN = "grantAdminByEmail"
     const val REVOKE_ADMIN = "revokeAdmin"
+    const val REDEEM_COUPON = "redeemCreditCoupon"
+    const val CREATE_COUPON = "createCreditCoupon"
+    const val LIST_COUPONS = "listCreditCoupons"
+    const val SET_COUPON_ACTIVE = "setCreditCouponActive"
+    const val GRANT_CREDIT = "grantCredit"
 }
 
 object NotificationChannels {

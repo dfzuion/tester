@@ -9,33 +9,33 @@ import androidx.compose.ui.graphics.Color
  * per screen region - so it reads as premium hardware rather than casino.
  */
 object RrrColors {
-    val Ink = Color(0xFF0A0C08)          // app background
-    val Surface = Color(0xFF12150E)      // cards
-    val SurfaceRaised = Color(0xFF1A1E14) // sheets, dialogs, inputs
-    val Hairline = Color(0xFF333A26)     // 1dp dividers and card borders
+    val Ink = Color(0xFF0C0F0A)          // app background
+    val Surface = Color(0xFF171C12)      // cards
+    val SurfaceRaised = Color(0xFF222819) // sheets, dialogs, inputs
+    val Hairline = Color(0xFF3E4A2C)     // 1dp dividers and card borders
 
-    val Gold = Color(0xFFC8913F)         // primary accent
-    val GoldBright = Color(0xFFE3B366)   // pressed / focus
-    val GoldDim = Color(0x33C8913F)      // tint fills
+    val Gold = Color(0xFFE0A03F)         // primary accent
+    val GoldBright = Color(0xFFFFC463)   // pressed / focus
+    val GoldDim = Color(0x3DE0A03F)      // tint fills
 
-    val Bone = Color(0xFFEFE7D6)         // primary type
-    val Mist = Color(0xFFADA791)         // secondary type
-    val Slate = Color(0xFF726C59)        // tertiary type, disabled
+    val Bone = Color(0xFFF6EFE0)         // primary type
+    val Mist = Color(0xFFBDB69D)         // secondary type
+    val Slate = Color(0xFF867F68)        // tertiary type, disabled
 
-    val Success = Color(0xFF7D9A4E)
-    val Warning = Color(0xFFD4923F)
-    val Danger = Color(0xFFC4564B)
+    val Success = Color(0xFF95BB55)
+    val Warning = Color(0xFFF0A73F)
+    val Danger = Color(0xFFDE6152)
 
     /**
      * Khaki is the bank-side colour: chips, selected states, the camo texture.
      * Bronze stays reserved for money and prizes, so it keeps its punch.
      */
-    val Khaki = Color(0xFF6B7A3F)
-    val KhakiBright = Color(0xFFA3B36A)
-    val KhakiDim = Color(0x336B7A3F)
+    val Khaki = Color(0xFF8CA34B)
+    val KhakiBright = Color(0xFFBDD17A)
+    val KhakiDim = Color(0x3D8CA34B)
 
     /** Weed green from the logo - used for subtle "live"/open states. */
-    val Weed = Color(0xFF5A6B3B)
+    val Weed = Color(0xFF6E8446)
 
     val ScrimTop = Brush.verticalGradient(
         0f to Color(0xCC000000), 0.45f to Color(0x33000000), 1f to Color(0x00000000)
