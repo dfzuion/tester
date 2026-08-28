@@ -50,6 +50,12 @@ jobs:
             echo "::warning::No GOOGLE_SERVICES_JSON secret set. This APK will install and open, but every screen that needs data will show a connection error. Add the secret for a working build."
           fi
 
+      # Costs two seconds and catches the mistake that has failed this build
+      # more than once: a symbol used without its import. Gradle finds it too,
+      # but only after several minutes of downloading and compiling.
+      - name: Check Kotlin references
+        run: python3 tools/check_kotlin_refs.py
+
       - name: Build
         env:
           # The publishable key is safe to ship inside the app - it can only

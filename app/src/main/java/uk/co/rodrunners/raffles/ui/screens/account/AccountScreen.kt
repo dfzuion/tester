@@ -63,6 +63,7 @@ import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrType
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
