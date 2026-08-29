@@ -55,7 +55,12 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import uk.co.rodrunners.raffles.core.Money
+import uk.co.rodrunners.raffles.data.model.LeaderboardWeek
 import uk.co.rodrunners.raffles.ui.components.Wordmark
 import uk.co.rodrunners.raffles.ui.theme.Dimens
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
@@ -211,8 +216,13 @@ private fun formatWeight(weight: Float): String = String.format(Locale.UK, "%.2f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameScreen(onBack: () -> Unit) {
+fun GameScreen(
+    onBack: () -> Unit,
+    viewModel: GameViewModel = hiltViewModel(),
+) {
     val context = LocalContext.current
+    val board by viewModel.board.collectAsStateWithLifecycle()
+    val boardNote by viewModel.note.collectAsStateWithLifecycle()
 
     var phase by remember { mutableStateOf(Phase.Ready) }
     var message by remember { mutableStateOf("Tap the water to cast") }
@@ -293,6 +303,9 @@ fun GameScreen(onBack: () -> Unit) {
                             log = log + (species.name to weight)
                             writeLog(context, species.name, weight)
                         }
+
+                        // Onto the weekly board as well as the local log.
+                        viewModel.record(species.name, weight)
 
                         phase = Phase.Landed
                         message = if (record) {
@@ -496,6 +509,10 @@ fun GameScreen(onBack: () -> Unit) {
 
             Spacer(Modifier.height(26.dp))
 
+            WeeklyBoard(board, boardNote)
+
+            Spacer(Modifier.height(26.dp))
+
             Text(
                 "The log",
                 style = MaterialTheme.typography.titleLarge,
@@ -543,6 +560,110 @@ private fun Stat(label: String, value: Pair<String, Float>?, modifier: Modifier 
             textAlign = TextAlign.Start,
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+}
+
+/**
+ * The weekly board. Heaviest single fish wins ten pounds of site credit,
+ * settled automatically on Monday morning.
+ */
+@Composable
+private fun WeeklyBoard(board: LeaderboardWeek, note: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            "This week",
+            style = MaterialTheme.typography.titleLarge,
+            color = RrrColors.Bone,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            "${Money.formatCompact(board.prizePence)} SITE CREDIT",
+            style = MaterialTheme.typography.labelSmall,
+            color = RrrColors.Ink,
+            modifier = Modifier
+                .clip(RrrShapes.small)
+                .background(RrrColors.Khaki)
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+        )
+    }
+
+    Text(
+        "Heaviest single fish of the week wins. Paid into your account " +
+            "automatically on Monday morning, and the board starts again.",
+        style = MaterialTheme.typography.bodySmall,
+        color = RrrColors.Mist,
+        modifier = Modifier.padding(top = 6.dp),
+    )
+
+    if (note.isNotBlank()) {
+        Text(
+            note,
+            style = MaterialTheme.typography.labelLarge,
+            color = RrrColors.KhakiBright,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    if (board.rows.isEmpty()) {
+        Text(
+            "Nobody has landed one yet this week. First fish takes the lead.",
+            style = MaterialTheme.typography.bodySmall,
+            color = RrrColors.Mist,
+        )
+    }
+
+    board.rows.forEach { row ->
+        val yours = row.userId == board.you
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clip(RrrShapes.small)
+                .background(if (yours) RrrColors.KhakiDim else RrrColors.Surface)
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                row.position.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                color = if (row.position == 1) RrrColors.KhakiBright else RrrColors.Slate,
+                modifier = Modifier.width(26.dp),
+            )
+            Text(
+                row.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = RrrColors.Bone,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                row.species,
+                style = MaterialTheme.typography.labelSmall,
+                color = RrrColors.Slate,
+                modifier = Modifier.padding(end = 10.dp),
+            )
+            Text(
+                formatWeight(row.weightLb),
+                style = MaterialTheme.typography.labelLarge,
+                color = RrrColors.KhakiBright,
+            )
+        }
+    }
+
+    board.lastWeek?.let { last ->
+        if (last.displayName.isNotBlank()) {
+            Text(
+                "Last week: ${last.displayName} with a " +
+                    "${formatWeight(last.weightLb)} ${last.species.lowercase()}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = RrrColors.Mist,
+                modifier = Modifier.padding(top = 14.dp),
+            )
+        }
     }
 }
 
