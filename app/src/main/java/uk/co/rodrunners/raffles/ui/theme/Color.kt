@@ -39,7 +39,14 @@ object RrrColors {
     val Slate = Color(0xFF5E664F)        // tertiary type, disabled
 
     val Success = Color(0xFF9CC258)
-    val Warning = Color(0xFFD9903C)
+
+    /**
+     * Caution: ending soon, nearly gone, sold out. It was #D9903C, which sat a
+     * shade off the bronze that has been taken out of the app, so it read as
+     * gold on a khaki screen. This is unambiguously orange instead, and still
+     * clear of both the khaki that means "fine" and the red that means "no".
+     */
+    val Warning = Color(0xFFE07A45)
     val Danger = Color(0xFFDE6152)
 
     /** Top of the masthead gradient - warm, so the camo band reads as fabric. */
