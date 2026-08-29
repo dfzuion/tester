@@ -16,6 +16,11 @@ val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+// The sandbox the stripeWebhook endpoint is registered in (acct_1U9ByZEYog5IjCz3).
+// A publishable key from any other account produces payments that webhook never
+// sees, so the build says so rather than leaving it to be discovered at the till.
+val EXPECTED_STRIPE_TEST_PREFIX = "pk_test_51U9ByZEYog5IjCz3"
+
 fun secret(key: String, fallback: String = ""): String =
     (localProps.getProperty(key) ?: System.getenv(key) ?: fallback)
         // Secrets pasted into CI often carry a trailing newline or stray quotes;
@@ -181,6 +186,25 @@ gradle.taskGraph.whenReady {
         throw GradleException(
             "STRIPE_PUBLISHABLE_KEY_LIVE is not set. A production build must not ship the placeholder key."
         )
+    }
+
+    // A publishable key carries its Stripe account in the prefix, and the key is
+    // public anyway - it ships inside the APK. Printing it here turns "why did
+    // the payment never arrive" into something visible in the build log, because
+    // an app pointed at one Stripe account will never produce events on another
+    // account's webhook, and the failure looks identical to a broken webhook.
+    val testKey = secret("STRIPE_PUBLISHABLE_KEY_TEST")
+    if (testKey.isBlank() || testKey == "pk_test_REPLACE_ME") {
+        project.logger.warn("STRIPE_PUBLISHABLE_KEY_TEST is not set. Card payments will fail in this build.")
+    } else {
+        project.logger.lifecycle("Stripe test key account: " + testKey.take(24))
+        if (!testKey.startsWith(EXPECTED_STRIPE_TEST_PREFIX)) {
+            project.logger.warn(
+                "Stripe test key does not start with " + EXPECTED_STRIPE_TEST_PREFIX +
+                    ", which is the account the stripeWebhook endpoint is registered in. " +
+                    "Payments taken by this build will not reach that webhook."
+            )
+        }
     }
 }
 
