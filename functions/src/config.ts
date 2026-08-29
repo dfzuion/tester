@@ -14,6 +14,14 @@ export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 
 export const SUPPORT_EMAIL = defineString("SUPPORT_EMAIL", { default: "support@rodrunners.co.uk" });
 export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrunners.co.uk" });
+
+/**
+ * The business inbox. Everything an administrator is told about - a draw, an
+ * instant win, anything needing attention - is copied here as well, so the
+ * record does not depend on which administrator happened to be listed at the
+ * time or on anyone remembering to check the app.
+ */
+export const BUSINESS_EMAIL = defineString("BUSINESS_EMAIL", { default: "info@rodrunners.co.uk" });
 export const REGION = "europe-west2"; // London
 
 /** What a referral pays once the referred customer's first order is paid. */

@@ -1,6 +1,8 @@
 import * as admin from "firebase-admin";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { Collections, FROM_EMAIL, REGION, RESEND_API_KEY, SENDGRID_API_KEY } from "./config";
+import { onCall, CallableRequest } from "firebase-functions/v2/https";
+import { BUSINESS_EMAIL, Collections, ENFORCE_APP_CHECK, FROM_EMAIL, REGION, RESEND_API_KEY, SENDGRID_API_KEY } from "./config";
+import { requireAdmin } from "./guards";
 
 /**
  * Push goes out through FCM to per-user device tokens.
@@ -210,12 +212,25 @@ export async function notifyAdmins(
   try {
     const db = admin.firestore();
     const admins = await db.collection(Collections.adminUsers).where("active", "==", true).get();
+    const told = new Set<string>();
+
     await Promise.all(admins.docs.map(async (d) => {
       await createUserNotification(d.id, { category: "admin", title, body, deepLink: data.deepLink });
       await pushToUser(d.id, "admin", title, body, data);
-      const email = d.data().email as string | undefined;
-      if (email) await queueEmail(email, "admin_alert", { title, body });
+      const email = (d.data().email as string | undefined)?.trim().toLowerCase();
+      if (email) {
+        told.add(email);
+        await queueEmail(email, "admin_alert", { title, body });
+      }
     }));
+
+    // And the business inbox, so there is one place every win lands whoever
+    // happens to be an administrator that week. Skipped if an administrator
+    // already holds that address, rather than sending the same mail twice.
+    const business = BUSINESS_EMAIL.value().trim().toLowerCase();
+    if (business && !told.has(business)) {
+      await queueEmail(business, "admin_alert", { title, body });
+    }
   } catch (err) {
     console.error("admin notification failed", { title, err });
   }
@@ -354,5 +369,94 @@ export const deliverQueuedMail = onSchedule(
         console.error("email delivery failed", { id: doc.id, attempts: attempts + 1, failure });
       }
     }
+  }
+);
+
+/* =========================================================
+   THE QUEUE, FROM THE ADMIN PANEL
+
+   Every email the site sends lands in the mail collection first and is
+   delivered a minute later. When delivery fails - a revoked provider key,
+   an unverified sending domain - the reason is written onto the document
+   and nowhere else, which means nobody finds out until a customer says
+   they never got their entry numbers.
+
+   These two put the queue in front of an administrator: what is waiting,
+   what went out, and the provider's own words for anything that did not.
+========================================================= */
+
+export const listMailQueue = onCall(
+  { region: REGION, enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    await requireAdmin(req, "reports.read");
+
+    const db = admin.firestore();
+    const snap = await db.collection(Collections.mail)
+      .orderBy("createdAt", "desc").limit(60).get();
+
+    const counts: Record<string, number> = {};
+    const messages = snap.docs.map((d) => {
+      const m = d.data();
+      const status = String(m.deliveryStatus ?? "pending");
+      counts[status] = (counts[status] ?? 0) + 1;
+
+      return {
+        id: d.id,
+        to: Array.isArray(m.to) ? m.to[0] : m.to ?? "",
+        subject: m.message?.subject ?? "",
+        templateId: m.templateId ?? "",
+        status,
+        attempts: m.attempts ?? 0,
+        // The provider's message, verbatim. A paraphrase of "401 invalid
+        // grant" would lose the one word that says which thing is wrong.
+        error: m.error ?? null,
+        createdAtMillis: m.createdAt?.toMillis?.() ?? null,
+        sentAtMillis: m.sentAt?.toMillis?.() ?? null,
+      };
+    });
+
+    return { counts, messages, from: FROM_EMAIL.value(), business: BUSINESS_EMAIL.value() };
+  }
+);
+
+/**
+ * Puts failed messages back in the queue. Nothing is rewritten - the same
+ * message is tried again - so this is what you run after fixing a provider
+ * key, to send the mail that should have gone out at the time.
+ */
+export const retryFailedMail = onCall(
+  { region: REGION, enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const ctx = await requireAdmin(req, "*");
+    const only = typeof req.data?.mailId === "string" ? req.data.mailId : null;
+
+    const db = admin.firestore();
+    const target = only
+      ? [await db.collection(Collections.mail).doc(only).get()]
+      : (await db.collection(Collections.mail)
+          .where("deliveryStatus", "in", ["failed", "abandoned"])
+          .limit(200).get()).docs;
+
+    const batch = db.batch();
+    let queued = 0;
+
+    for (const doc of target) {
+      if (!doc.exists) continue;
+      const status = String(doc.data()?.deliveryStatus ?? "");
+      if (status !== "failed" && status !== "abandoned") continue;
+
+      batch.update(doc.ref, {
+        deliveryStatus: "pending",
+        attempts: 0,
+        error: admin.firestore.FieldValue.delete(),
+        requeuedAt: admin.firestore.FieldValue.serverTimestamp(),
+        requeuedBy: ctx.uid,
+      });
+      queued++;
+    }
+
+    if (queued > 0) await batch.commit();
+
+    return { queued };
   }
 );
