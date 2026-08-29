@@ -382,8 +382,8 @@ fun GameScreen(
 
                     if (hidden.running && hidden.sinceCast >= hidden.runUntil) {
                         hidden.running = false
-                        hidden.nextRun = hidden.sinceCast + 0.8f +
-                            Random.nextFloat() * (2.4f - heft * 1.2f)
+                        hidden.nextRun = hidden.sinceCast + 0.7f +
+                            Random.nextFloat() * (2.2f - heft * 1.0f)
                         message = "Now. Pump it in."
                     } else if (
                         !hidden.running &&
@@ -393,26 +393,39 @@ fun GameScreen(
                     ) {
                         hidden.running = true
                         hidden.runUntil = hidden.sinceCast + 0.5f +
-                            Random.nextFloat() * (0.6f + 1.1f * heft)
+                            Random.nextFloat() * (0.7f + 1.2f * heft)
                         message = "Running again. Ease off."
                     }
 
-                    // Holding on gains line - but not while it is running,
-                    // when all you can do is keep the rod bent and let it go.
-                    // That is what playing a big fish is, and it is why a
-                    // fifty takes a while to come in.
+                    // Holding on gains line - but barely any while it is
+                    // running, when all you can do is keep the rod bent and
+                    // let it go. That is what playing a big fish is, and it
+                    // is why a fifty takes a while to come in.
+                    //
+                    // These numbers were not guessed. The first set made a
+                    // thirty impossible and a fifty literally unlandable: a
+                    // run took more line off you than the gap between runs
+                    // could win back, so the fight could not be finished by
+                    // anyone, ever. They were re-fitted by simulating a
+                    // player who watches a bar and reacts a fifth of a
+                    // second late. A careful one lands a roach nine times in
+                    // ten, a thirty seven times in ten, a forty-five about
+                    // half the time, and a fifty-eight roughly one in four
+                    // after the best part of a minute. The website runs the
+                    // same figures. Change one and check the others hold.
                     if (hidden.pulling) {
                         tension += dt * (
-                            0.40f + fight * 0.28f + if (hidden.running) 0.80f + heft else 0f
+                            0.34f + fight * 0.22f +
+                                if (hidden.running) 0.30f + heft * 0.42f else 0f
                             )
-                        reeled += dt * (if (hidden.running) 0.015f else 0.21f - heft * 0.08f)
+                        reeled += dt * (if (hidden.running) 0.045f else 0.30f - heft * 0.11f)
                     } else {
-                        tension -= dt * 0.72f
-                        reeled -= dt * (if (hidden.running) 0.15f + heft * 0.15f else 0.045f)
+                        tension -= dt * 0.95f
+                        reeled -= dt * (if (hidden.running) 0.05f + heft * 0.085f else 0.05f)
                     }
 
                     if (hidden.running && !hidden.pulling) {
-                        tension += dt * (0.22f + heft * 0.34f)
+                        tension += dt * (0.09f + heft * 0.18f)
                     }
 
                     tension = tension.coerceIn(0f, 1.25f)
@@ -424,9 +437,9 @@ fun GameScreen(
                     // there is a moment to feel it and put it right, which is
                     // the difference between difficult and unfair.
                     hidden.overFor = if (tension >= 1f) hidden.overFor + dt else 0f
-                    hidden.slackFor = if (tension <= 0.10f) hidden.slackFor + dt else 0f
+                    hidden.slackFor = if (tension <= 0.16f) hidden.slackFor + dt else 0f
 
-                    if (hidden.overFor > 0.52f || hidden.slackFor > 1.3f) {
+                    if (hidden.overFor > 0.52f || hidden.slackFor > 1.0f) {
                         val pulled = hidden.overFor > 0.52f
 
                         lostCount += 1
