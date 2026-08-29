@@ -19,20 +19,23 @@ object RrrColors {
     val Hairline = Color(0xFF232819)     // 1dp dividers and card borders
 
     /**
-     * Khaki is the interface colour: chips, selected states, primary buttons.
+     * The interface colour: chips, selected states, primary buttons. It is the
+     * deep olive of a carp's back rather than the lighter khaki it used to be,
+     * taken from a colour Scott supplied. The names below still say Khaki
+     * because 84 call sites use them and renaming is a large diff for no gain.
      */
-    val Khaki = Color(0xFFA5C05C)
-    val KhakiBright = Color(0xFFC8DC90)
-    val KhakiDim = Color(0x3DA5C05C)
+    val Khaki = Color(0xFF51513F)
+    val KhakiBright = Color(0xFF9B9B7E)
+    val KhakiDim = Color(0x3D51513F)
 
     /**
      * Bronze is out. Scott asked for no gold anywhere, on the app as well as
      * the site, so these now carry the khaki family. The names stay put: 84
      * call sites use them, and renaming would be a large diff for no gain.
      */
-    val Gold = Color(0xFFA5C05C)
-    val GoldBright = Color(0xFFC8DC90)
-    val GoldDim = Color(0x3DA5C05C)
+    val Gold = Color(0xFF51513F)
+    val GoldBright = Color(0xFF9B9B7E)
+    val GoldDim = Color(0x3D51513F)
 
     val Bone = Color(0xFFF0EBDB)         // primary type
     val Mist = Color(0xFF8E9678)         // secondary type
