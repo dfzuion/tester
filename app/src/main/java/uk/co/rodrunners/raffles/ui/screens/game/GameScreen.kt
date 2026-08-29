@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +68,7 @@ import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -101,32 +103,49 @@ private data class Species(
     val flank: Color,
     val belly: Color,
     val fin: Color,
+    /** "long" on a carp, "short" on a roach or bream, "round" on a tench. */
+    val dorsal: String,
+    /** "long" only on a bream, where it names the fish from the far bank. */
+    val anal: String,
+    /** 0 is a tench's paddle, 1 is a roach cut back almost to the wrist. */
+    val fork: Float,
+    /** Four on a carp, two on a tench, none on anything else. */
+    val barbels: Int,
+    /** Head length as a fraction of the body. */
+    val head: Float,
+    val eye: Color,
 )
 
 private val SPECIES = listOf(
     Species(
-        "Roach", 0.25f, 3.5f, 0.5f, 0.30f, "small",
+        "Roach", 0.25f, 3.5f, 0.5f, 0.29f, "small",
         Color(0xFF3E4C55), Color(0xFFA9B4B8), Color(0xFFDDE2DE), Color(0xFFB0604C),
+        "short", "short", 0.85f, 0, 0.11f, Color(0xFFB4432C),
     ),
     Species(
-        "Tench", 1.2f, 12f, 0.85f, 0.33f, "small",
+        "Tench", 1.2f, 12f, 0.85f, 0.32f, "small",
         Color(0xFF1B2715), Color(0xFF3E5A2B), Color(0xFF7A7F44), Color(0xFF1E2A16),
+        "round", "short", 0.14f, 2, 0.13f, Color(0xFFA6382A),
     ),
     Species(
         "Bream", 1.5f, 18f, 0.7f, 0.44f, "small",
         Color(0xFF332E1F), Color(0xFF8A7C55), Color(0xFFC7C0A6), Color(0xFF2A261B),
+        "short", "long", 0.90f, 0, 0.10f, Color(0xFFC3B98F),
     ),
     Species(
-        "Leather carp", 5f, 42f, 1.25f, 0.38f, "none",
+        "Leather carp", 5f, 42f, 1.25f, 0.335f, "none",
         Color(0xFF241F13), Color(0xFF5C5330), Color(0xFF8E8256), Color(0xFF2A2416),
+        "long", "short", 0.55f, 4, 0.15f, Color(0xFFC6B87E),
     ),
     Species(
-        "Common carp", 5f, 50f, 1.05f, 0.36f, "small",
+        "Common carp", 5f, 50f, 1.05f, 0.325f, "small",
         Color(0xFF33351A), Color(0xFF8B7A36), Color(0xFFC6B478), Color(0xFF4A3F20),
+        "long", "short", 0.55f, 4, 0.15f, Color(0xFFC6B87E),
     ),
     Species(
-        "Mirror carp", 6f, 60f, 1.2f, 0.385f, "plates",
+        "Mirror carp", 6f, 60f, 1.2f, 0.35f, "plates",
         Color(0xFF2A2C16), Color(0xFF6F6331), Color(0xFFA2946A), Color(0xFF3A3218),
+        "long", "short", 0.52f, 4, 0.16f, Color(0xFFC6B87E),
     ),
 )
 
@@ -248,8 +267,11 @@ private fun proportions(species: Species, weight: Float): Build {
     val ratio = maxOf(0.2f, weight / maxOf(0.1f, average)).toDouble()
 
     return Build(
-        length = ratio.pow(1.0 / 3.0).toFloat(),
-        depth = minOf(1.42f, ratio.pow(1.0 / 5.0).toFloat()),
+        length = minOf(1.75f, ratio.pow(1.0 / 3.0).toFloat()),
+        // Capped hard. A big carp is deep, but a length to depth ratio much
+        // under two and a half stops looking like a fish and starts looking
+        // like a plate, and this was going well past that on a fifty.
+        depth = minOf(1.18f, ratio.pow(1.0 / 6.0).toFloat()),
     )
 }
 
@@ -620,6 +642,7 @@ fun GameScreen(
                     reeled = reeled,
                     taking = hidden.taking || hidden.dipping,
                     weight = hidden.weight,
+                    running = hidden.running,
                     clock = swim,
                 )
             }
@@ -1057,6 +1080,7 @@ private fun DrawScope.drawScene(
     reeled: Float,
     taking: Boolean,
     weight: Float,
+    running: Boolean,
     clock: Float,
 ) {
     val w = size.width
@@ -1074,7 +1098,8 @@ private fun DrawScope.drawScene(
 
     drawLilies(w, h, horizon, clock)
 
-    val mouth = drawFish(phase, species, weight, w, h, floatX, floatY, distance, reeled, clock)
+    val mouth =
+        drawFish(phase, species, weight, w, h, floatX, floatY, distance, reeled, running, clock)
 
     drawRodAndLine(phase, tension, w, h, mouth?.x ?: floatX, mouth?.y ?: floatY, clock)
 
@@ -1317,11 +1342,11 @@ private fun DrawScope.drawCarp(
 
     val body = Pen()
     body.moveTo(0f, 0f)
-    body.cubicTo(length * 0.16f, -d * 0.62f, length * 0.34f, -d * 0.98f, length * 0.50f, -d * 0.96f)
-    body.cubicTo(length * 0.66f, -d * 0.94f, length * 0.76f, -d * 0.52f, length * 0.83f, -d * 0.24f)
-    body.cubicTo(length * 0.86f, -d * 0.14f, length * 0.86f, d * 0.14f, length * 0.83f, d * 0.24f)
-    body.cubicTo(length * 0.74f, d * 0.66f, length * 0.60f, d * 0.92f, length * 0.44f, d * 0.90f)
-    body.cubicTo(length * 0.26f, d * 0.88f, length * 0.10f, d * 0.50f, 0f, 0f)
+    body.cubicTo(length * 0.09f, -d * 0.52f, length * 0.20f, -d * 0.88f, length * 0.36f, -d * 0.97f)
+    body.cubicTo(length * 0.54f, -d * 1.02f, length * 0.71f, -d * 0.68f, length * 0.855f, -d * 0.19f)
+    body.cubicTo(length * 0.885f, -d * 0.09f, length * 0.885f, d * 0.09f, length * 0.855f, d * 0.19f)
+    body.cubicTo(length * 0.71f, d * 0.70f, length * 0.54f, d * 0.98f, length * 0.36f, d * 0.93f)
+    body.cubicTo(length * 0.20f, d * 0.86f, length * 0.09f, d * 0.50f, 0f, 0f)
     body.close()
 
     drawPath(
@@ -1358,26 +1383,55 @@ private fun DrawScope.drawCarp(
         }
 
         if (species.scales == "plates") {
-            // A mirror's scaling is scattered plates, heaviest along the back
-            // and the lateral line. Fixed positions, not random, so it does
-            // not shimmer between frames.
+            // A mirror's scaling is a scattered row of big irregular plates,
+            // heaviest along the back and again down the lateral line, with
+            // bare skin between. Fixed positions and fixed shapes, not
+            // random, so it does not shimmer between frames - and no two the
+            // same size, because on a real fish no two are.
             val plates = listOf(
-                0.22f to -0.72f, 0.31f to -0.80f, 0.40f to -0.74f, 0.50f to -0.82f,
-                0.60f to -0.66f, 0.28f to -0.10f, 0.42f to 0.02f, 0.56f to -0.06f,
-                0.68f to -0.18f, 0.36f to 0.44f,
+                listOf(0.24f, -0.74f, 1.00f, 0.30f),
+                listOf(0.33f, -0.83f, 1.25f, -0.20f),
+                listOf(0.43f, -0.78f, 0.85f, 0.15f),
+                listOf(0.53f, -0.85f, 1.15f, 0.35f),
+                listOf(0.63f, -0.70f, 0.75f, -0.30f),
+                listOf(0.71f, -0.52f, 0.60f, 0.10f),
+                listOf(0.29f, -0.06f, 0.95f, 0.05f),
+                listOf(0.41f, 0.04f, 1.10f, -0.15f),
+                listOf(0.55f, -0.02f, 0.80f, 0.20f),
+                listOf(0.67f, -0.16f, 0.65f, 0.00f),
+                listOf(0.36f, 0.46f, 0.70f, 0.25f),
+                listOf(0.50f, 0.52f, 0.55f, -0.10f),
             )
 
-            plates.forEachIndexed { i, (px, py) ->
-                val rx = length * 0.036f
-                val ry = d * 0.20f
-                val at = Offset(length * px - rx, d * py - ry)
+            plates.forEachIndexed { i, plate ->
+                val rx = length * 0.030f * plate[2]
+                val ry = d * 0.20f * plate[2]
 
-                drawOval(
-                    if (i % 2 == 0) Color(0x5CBAB086) else Color(0x6BD6CEA6),
-                    at,
-                    Size(rx * 2, ry * 2),
-                )
-                drawOval(Color(0x59000000), at, Size(rx * 2, ry * 2), style = Stroke(edge * 0.7f))
+                // Five sided rather than elliptical: a scale has edges where
+                // it meets the ones it grew against, and a fish covered in
+                // perfect ovals looked like it had measles.
+                val shape = Pen()
+                shape.moveTo(-rx, -ry * 0.25f)
+                shape.lineTo(-rx * 0.45f, -ry)
+                shape.lineTo(rx * 0.75f, -ry * 0.72f)
+                shape.lineTo(rx, ry * 0.35f)
+                shape.lineTo(-rx * 0.25f, ry)
+                shape.close()
+
+                withTransform({
+                    translate(length * plate[0], d * plate[1])
+                    rotate(plate[3] * 180f / PI.toFloat(), Offset.Zero)
+                }) {
+                    drawPath(
+                        shape.path,
+                        when (i % 3) {
+                            0 -> Color(0x80C4BA8E)
+                            1 -> Color(0x70ACA27A)
+                            else -> Color(0x668E8E6A)
+                        },
+                    )
+                    drawPath(shape.path, Color(0x6B000000), style = Stroke(edge * 0.75f))
+                }
             }
         }
 
@@ -1404,19 +1458,57 @@ private fun DrawScope.drawCarp(
     // edge. Without it the dorsal simply disappears and the fish looks finless.
     val finEdge = Color(0x4DE2E8D0)
 
+    // The dorsal is the quickest way to tell one of these from another. A
+    // carp carries a long one along half its back with a hollow along the
+    // top; a roach or a bream has a short triangle set further forward; a
+    // tench's is short and rounded off. The same fin on all six made every
+    // fish a carp in a different colour.
     val dorsal = Pen()
-    dorsal.moveTo(length * 0.34f, -d * 0.94f)
-    dorsal.quadTo(length * 0.50f, -d * 1.62f, length * 0.72f, -d * 0.62f)
-    dorsal.lineTo(length * 0.70f, -d * 0.60f)
-    dorsal.quadTo(length * 0.52f, -d * 1.20f, length * 0.36f, -d * 0.86f)
+
+    when (species.dorsal) {
+        "long" -> {
+            dorsal.moveTo(length * 0.33f, -d * 0.96f)
+            dorsal.quadTo(length * 0.40f, -d * 1.24f, length * 0.45f, -d * 1.22f)
+            dorsal.quadTo(length * 0.60f, -d * 1.04f, length * 0.71f, -d * 0.66f)
+            dorsal.quadTo(length * 0.52f, -d * 0.92f, length * 0.33f, -d * 0.96f)
+        }
+        "round" -> {
+            dorsal.moveTo(length * 0.41f, -d * 0.94f)
+            dorsal.quadTo(length * 0.47f, -d * 1.22f, length * 0.53f, -d * 1.20f)
+            dorsal.quadTo(length * 0.58f, -d * 1.14f, length * 0.58f, -d * 0.90f)
+        }
+        else -> {
+            dorsal.moveTo(length * 0.38f, -d * 0.96f)
+            dorsal.quadTo(length * 0.43f, -d * 1.30f, length * 0.47f, -d * 1.28f)
+            dorsal.quadTo(length * 0.53f, -d * 1.16f, length * 0.55f, -d * 0.92f)
+        }
+    }
+
     dorsal.close()
     drawPath(dorsal.path, species.fin)
     drawPath(dorsal.path, finEdge, style = Stroke(edge))
 
+    // The spines a fin is stretched over. Without them every fin was a paper
+    // cut-out stuck to the side of the fish.
+    val rayColour = Color(0x4D000000)
+    val rayWidth = maxOf(0.4f, length * 0.0035f)
+    val rayCount = if (species.dorsal == "long") 9 else 6
+
+    clipPath(dorsal.path) {
+        for (i in 0 until rayCount) {
+            val k = (i + 0.5f) / rayCount
+            val x = length * 0.34f + (length * 0.70f - length * 0.34f) * k
+            val y = -d * 0.94f + (-d * 0.68f - -d * 0.94f) * k
+
+            drawLine(rayColour, Offset(x, y), Offset(x, y - d * 0.9f), rayWidth)
+        }
+    }
+
+    // Pectoral, low down and just behind the gill cover, rounded at the tip.
     val pectoral = Pen()
-    pectoral.moveTo(length * 0.24f, d * 0.42f)
-    pectoral.quadTo(length * 0.30f, d * 1.02f, length * 0.14f, d * 0.86f)
-    pectoral.quadTo(length * 0.18f, d * 0.60f, length * 0.24f, d * 0.42f)
+    pectoral.moveTo(length * 0.26f, d * 0.56f)
+    pectoral.quadTo(length * 0.28f, d * 0.98f, length * 0.18f, d * 0.94f)
+    pectoral.quadTo(length * 0.20f, d * 0.74f, length * 0.26f, d * 0.56f)
     pectoral.close()
     drawPath(pectoral.path, species.fin)
     drawPath(pectoral.path, finEdge, style = Stroke(edge))
@@ -1428,32 +1520,67 @@ private fun DrawScope.drawCarp(
     drawPath(pelvic.path, species.fin)
     drawPath(pelvic.path, finEdge, style = Stroke(edge))
 
+    // The anal fin. On a bream it runs a third of the body and names the fish
+    // from the far bank; on everything else it is stubby.
     val anal = Pen()
-    anal.moveTo(length * 0.72f, d * 0.52f)
-    anal.quadTo(length * 0.72f, d * 1.06f, length * 0.60f, d * 0.86f)
+
+    if (species.anal == "long") {
+        anal.moveTo(length * 0.80f, d * 0.40f)
+        anal.quadTo(length * 0.72f, d * 1.34f, length * 0.54f, d * 1.14f)
+        anal.lineTo(length * 0.55f, d * 0.92f)
+    } else {
+        anal.moveTo(length * 0.72f, d * 0.52f)
+        anal.quadTo(length * 0.72f, d * 1.06f, length * 0.60f, d * 0.86f)
+    }
+
     anal.close()
     drawPath(anal.path, species.fin)
     drawPath(anal.path, finEdge, style = Stroke(edge))
 
-    // Tail, hinged at the wrist so it sweeps rather than slides.
+    // Tail, hinged at the wrist so it sweeps rather than slides. How deeply it
+    // forks is species: a roach or a bream is cut back almost to the wrist, a
+    // carp less so, and a tench is famously nearly square - which is what you
+    // look for when one rolls at distance.
     withTransform({
-        translate(length * 0.84f, 0f)
+        translate(length * 0.865f, 0f)
         rotate(flex * 180f / PI.toFloat(), Offset.Zero)
     }) {
+        val tip = length * (0.12f + species.fork * 0.05f)
+        val notch = length * (0.05f + species.fork * 0.05f)
+        val spread = d * (0.52f + species.fork * 0.34f)
+
         val tail = Pen()
-        tail.moveTo(0f, -d * 0.20f)
-        tail.quadTo(length * 0.18f, -d * 0.40f, length * 0.26f, -d * 1.20f)
-        tail.quadTo(length * 0.16f, -d * 0.34f, length * 0.12f, 0f)
-        tail.quadTo(length * 0.16f, d * 0.34f, length * 0.26f, d * 1.20f)
-        tail.quadTo(length * 0.18f, d * 0.40f, 0f, d * 0.20f)
+        tail.moveTo(0f, -d * 0.13f)
+        tail.quadTo(length * 0.05f, -d * 0.28f, tip, -spread)
+        tail.quadTo(notch * 1.35f, -d * 0.20f, notch, 0f)
+        tail.quadTo(notch * 1.35f, d * 0.20f, tip, spread)
+        tail.quadTo(length * 0.05f, d * 0.28f, 0f, d * 0.13f)
         tail.close()
         drawPath(tail.path, species.fin)
         drawPath(tail.path, Color(0x47E2E8D0), style = Stroke(maxOf(0.5f, length * 0.005f)))
+
+        // The tail's rays fan from the wrist rather than off a base.
+        clipPath(tail.path) {
+            for (i in 0..10) {
+                val a = -1.0f + (i / 10f) * 2.0f
+
+                drawLine(
+                    Color(0x47000000),
+                    Offset.Zero,
+                    Offset(cos(a) * length * 0.30f, sin(a) * d * 1.6f),
+                    rayWidth,
+                )
+            }
+        }
     }
 
+    // Head: gill plate, mouth, barbels, eye. The plate sits where the head
+    // ends, and a carp's head is a good deal longer than a bream's.
+    val head = length * species.head
+
     val gill = Pen()
-    gill.moveTo(length * 0.15f, -d * 0.62f)
-    gill.quadTo(length * 0.19f, 0f, length * 0.14f, d * 0.52f)
+    gill.moveTo(head * 1.75f, -d * 0.72f)
+    gill.quadTo(head * 2.1f, 0f, head * 1.6f, d * 0.60f)
     drawPath(gill.path, Color(0x59000000), style = Stroke(edge))
 
     val mouth = Pen()
@@ -1461,24 +1588,35 @@ private fun DrawScope.drawCarp(
     mouth.quadTo(length * 0.045f, d * 0.16f, length * 0.085f, d * 0.11f)
     drawPath(mouth.path, Color(0x8C000000), style = Stroke(edge))
 
-    // Barbels. Only the carp family has them, and they are what makes a
-    // drawing of a carp look like a carp rather than a generic fish.
-    if (species.name.contains("carp") || species.name == "Tench") {
+    // Barbels. A carp has four, a tench two, a roach or bream none at all -
+    // which is the difference between a drawing that reads as a carp and one
+    // that reads as a fish.
+    if (species.barbels > 0) {
         val barbelA = Pen()
         barbelA.moveTo(length * 0.03f, d * 0.10f)
         barbelA.quadTo(length * 0.06f, d * 0.34f, length * 0.13f, d * 0.36f)
         drawPath(barbelA.path, Color(0x80000000), style = Stroke(maxOf(0.5f, length * 0.004f)))
+    }
 
+    if (species.barbels > 2) {
         val barbelB = Pen()
         barbelB.moveTo(length * 0.06f, d * 0.14f)
         barbelB.quadTo(length * 0.10f, d * 0.42f, length * 0.19f, d * 0.44f)
         drawPath(barbelB.path, Color(0x80000000), style = Stroke(maxOf(0.5f, length * 0.004f)))
     }
 
-    val eye = Offset(length * 0.115f, -d * 0.30f)
-    drawCircle(Color(0xFFC6B87E), length * 0.021f, eye)
-    drawCircle(Color(0xFF0B0C0A), length * 0.012f, eye)
-    drawCircle(Color(0xB3FFFFFF), length * 0.005f, Offset(eye.x - length * 0.005f, eye.y - d * 0.06f))
+    // A roach's eye is red and big enough to name the fish by, a tench's is
+    // small and red, a carp's a dull gold.
+    val eyeR = length * (if (species.barbels == 0) 0.026f else 0.021f)
+    val eye = Offset(head * 0.92f, -d * 0.30f)
+
+    drawCircle(species.eye, eyeR, eye)
+    drawCircle(Color(0xFF0B0C0A), eyeR * 0.56f, eye)
+    drawCircle(
+        Color(0xB3FFFFFF),
+        eyeR * 0.24f,
+        Offset(eye.x - eyeR * 0.24f, eye.y - eyeR * 0.3f),
+    )
 
     // Everything below the surface loses contrast with depth.
     if (sink > 0f) {
@@ -1496,6 +1634,7 @@ private fun DrawScope.drawFish(
     floatY: Float,
     distance: Float,
     reeled: Float,
+    running: Boolean,
     t: Float,
 ): Offset? {
     if (species == null) {
@@ -1539,17 +1678,45 @@ private fun DrawScope.drawFish(
     // like a mistake, because it is one.
     val roll = if (phase == Phase.Landed) -0.10f else -0.14f + sin(t * 2.2f) * 0.09f
 
-    // A fish being played thrashes at the surface, and the water shows it.
-    if (progress > 0.45f) {
+    // How far under it still is. Everything the water does to the fish comes
+    // off this rather than off the progress bar, so a fish held deep by a run
+    // stays a shadow until it is actually beaten.
+    val under = ((y - surface) / maxOf(1f, length * 0.5f)).coerceIn(0f, 1f)
+
+    // A hooked fish pushes water ahead of it. While it runs that is a bow
+    // wave with a wake trailing off it; beaten and rolling on the top it is a
+    // boil, flat with nothing under it. They look different because they are,
+    // and it is how you read a fight.
+    if (running) {
+        drawWake(x, surface, length, t, 1f - under * 0.5f)
+    }
+
+    if (under < 0.55f) {
+        val boil = (0.55f - under) / 0.55f
+
         for (i in 0 until 3) {
-            val r = 16f + i * 22f + (t * 60f) % 40f
+            val r = length * (0.18f + i * 0.16f) + (t * 46f) % 26f
 
             drawOval(
-                Color(0xFFD2E0BA).copy(alpha = (progress - 0.45f) * 0.6f),
-                Offset(x - r, y - length * 0.1f - r * 0.30f),
-                Size(r * 2, r * 0.60f),
-                style = Stroke(width = 1.6f),
+                Color(0xFFD6E2C0).copy(alpha = boil * 0.55f),
+                Offset(x - r, surface - r * 0.26f),
+                Size(r * 2, r * 0.52f),
+                style = Stroke(width = 1.5f),
             )
+        }
+
+        // Spray, but only when it is thrashing on the top.
+        if (boil > 0.6f) {
+            for (i in 0 until 7) {
+                val a = i * 1.31f + t * 3.4f
+                val r = length * (0.14f + (i % 3) * 0.07f)
+
+                drawCircle(
+                    Color(0xFFE8F0DC).copy(alpha = (boil - 0.6f) * 0.9f),
+                    1.5f,
+                    Offset(x + cos(a) * r, surface - abs(sin(a)) * r * 0.5f),
+                )
+            }
         }
     }
 
@@ -1557,12 +1724,58 @@ private fun DrawScope.drawFish(
         translate(x, y)
         rotate(roll * 180f / PI.toFloat(), Offset.Zero)
     }) {
-        drawCarp(species, length, beat, maxOf(0f, 0.50f - progress * 0.50f), build.depth)
+        drawCarp(species, length, beat, under * 0.62f, build.depth)
+    }
+
+    // What is still below the waterline reads green and loses its edges, so
+    // the fish is one object crossing a surface rather than two halves.
+    if (under > 0.02f && y - length * 0.4f < surface) {
+        clipRect(top = surface) {
+            drawRect(
+                Color(0xFF1C2E20).copy(alpha = 0.16f + under * 0.20f),
+                Offset(x - length, surface),
+                Size(length * 2.2f, length),
+            )
+        }
     }
 
     // The nose is the origin the fish is drawn from, so it is also where the
     // hook is and where the line has to end.
     return Offset(x, y)
+}
+
+/**
+ * The water a running fish pushes: a raised bulge over its shoulders and a V
+ * trailing back from it, both faded by how deep it is. A fish six feet down
+ * moves the surface, but only just.
+ */
+private fun DrawScope.drawWake(x: Float, surface: Float, length: Float, t: Float, strength: Float) {
+    if (strength <= 0f) {
+        return
+    }
+
+    val bulge = length * 0.34f
+
+    drawArc(
+        Color(0xFFCEDEBA).copy(alpha = 0.30f * strength),
+        180f,
+        180f,
+        false,
+        Offset(x + length * 0.12f - bulge, surface - length * 0.09f),
+        Size(bulge * 2, length * 0.18f),
+        style = Stroke(width = 1.4f),
+    )
+
+    for (i in 0 until 4) {
+        val age = (t * 0.9f + i * 0.25f) % 1f
+        val back = length * (0.2f + age * 1.5f)
+        val open = length * (0.06f + age * 0.55f)
+        val colour = Color(0xFFCEDEBA).copy(alpha = 0.26f * strength * (1f - age))
+        val from = Offset(x + length * 0.10f, surface)
+
+        drawLine(colour, from, Offset(from.x + back, surface - open * 0.34f), 1.4f)
+        drawLine(colour, from, Offset(from.x + back, surface + open * 0.34f), 1.4f)
+    }
 }
 
 private fun DrawScope.drawRodAndLine(
