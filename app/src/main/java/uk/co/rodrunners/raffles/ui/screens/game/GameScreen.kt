@@ -591,9 +591,10 @@ fun GameScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             Text(
-                "Pick a bait, set the cast, strike when the float goes, then " +
-                    "play it in without snapping the line. No prizes and no " +
-                    "entries, just something to do while you wait for the draw.",
+                "Pick a bait, set the cast, and strike inside the take. Then " +
+                    "play it in without pulling the hook out or letting it " +
+                    "into the snags. Heaviest fish of the week wins site " +
+                    "credit; no entry, and nothing to pay.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = RrrColors.Mist,
                 modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
@@ -694,7 +695,7 @@ fun GameScreen(
 
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "LINE SNAPPED",
+                        "LOST",
                         style = MaterialTheme.typography.labelSmall,
                         color = RrrColors.Slate,
                     )
