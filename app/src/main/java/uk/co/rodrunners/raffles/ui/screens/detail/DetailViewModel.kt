@@ -32,8 +32,14 @@ data class CompetitionDetail(
     val isFavourite: Boolean = false,
     val signedIn: Boolean = false,
 ) {
+    /**
+     * Use perCustomerLimit, never the raw field. A stored 0 means the raffle
+     * set no limit of its own and the server default (100) applies - reading
+     * the raw 0 made every such raffle look like the customer was already at
+     * their limit while holding no entries at all.
+     */
     val remainingAllowance: Int
-        get() = (competition.maxEntriesPerCustomer - myEntryCount).coerceAtLeast(0)
+        get() = (competition.perCustomerLimit - myEntryCount).coerceAtLeast(0)
     val atPersonalLimit: Boolean get() = remainingAllowance == 0
 }
 

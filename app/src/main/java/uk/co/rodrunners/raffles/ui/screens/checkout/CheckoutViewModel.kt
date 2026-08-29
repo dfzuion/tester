@@ -84,7 +84,7 @@ data class CheckoutState(
 
     val maxSelectable: Int
         get() = (competition?.let {
-            minOf(it.entriesRemaining, it.maxEntriesPerCustomer - alreadyHeld)
+            minOf(it.entriesRemaining, it.perCustomerLimit - alreadyHeld)
         } ?: 1).coerceAtLeast(0)
 
     val canContinueFromReview: Boolean get() = breakdown != null && quantity in 1..maxSelectable && !quoting
