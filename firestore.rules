@@ -89,6 +89,23 @@ service cloud.firestore {
     }
 
     /**
+     * The Cast & Catch board. Readable by anyone, because a leaderboard that
+     * only its own entrants can see is not a leaderboard. Written only by the
+     * callable that validates the weight - a client that could write here
+     * directly could simply type its way to the weekly prize.
+     */
+    match /gameScores/{id} {
+      allow get, list: if true;
+      allow write: if false;
+    }
+
+    /** Settled weeks: who won, with what, and that they were paid. */
+    match /gameWeeks/{id} {
+      allow get, list: if true;
+      allow write: if false;
+    }
+
+    /**
      * Credit is server-money: the balance lives on the user document and every
      * movement is an immutable ledger row. Customers read their own ledger and
      * nothing else; only the Admin SDK ever writes here.
