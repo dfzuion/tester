@@ -57,8 +57,21 @@ export const createOrderAndPaymentIntent = onCall(
     const replay = await db.collection(Collections.orders)
       .where("userId", "==", uid).where("idempotencyKey", "==", idempotencyKey).limit(1).get();
     if (!replay.empty) {
+      // The replay has to answer in the same shape as a fresh order, or a
+      // retried credit-only purchase comes back with no client secret and
+      // paidWithCredit missing, and the client tries to confirm a payment
+      // that was never created.
       const o = replay.docs[0].data();
-      return { orderId: replay.docs[0].id, clientSecret: o.stripeClientSecret, breakdown: o.breakdown };
+      return {
+        orderId: replay.docs[0].id,
+        orderNumber: o.orderNumber ?? null,
+        clientSecret: o.stripeClientSecret ?? null,
+        paidWithCredit: o.paidWith === "credit",
+        creditAppliedPence: o.creditAppliedPence ?? 0,
+        amountDuePence: o.amountDuePence ?? o.breakdown?.totalPence ?? 0,
+        breakdown: o.breakdown,
+        entryNumbersPending: Array.isArray(o.entryNumbers) ? o.entryNumbers.length : 0,
+      };
     }
 
     const { breakdown, competition } = await computePrice({ competitionId, quantity: qty, promoCode, userId: uid });
@@ -156,6 +169,7 @@ export const createOrderAndPaymentIntent = onCall(
         clientSecret: null,
         paidWithCredit: true,
         creditAppliedPence: creditApplied,
+        amountDuePence: 0,
         breakdown,
         entryNumbersPending: numbers.length,
       };
@@ -190,6 +204,7 @@ export const createOrderAndPaymentIntent = onCall(
       clientSecret: intent.client_secret,
       paidWithCredit: false,
       creditAppliedPence: creditApplied,
+      amountDuePence: amountDue,
       publishableKeyHint: "Set STRIPE_PUBLISHABLE_KEY in local.properties",
       breakdown,
       entryNumbersPending: numbers.length,
