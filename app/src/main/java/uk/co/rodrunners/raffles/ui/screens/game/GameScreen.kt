@@ -68,6 +68,7 @@ import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -104,28 +105,28 @@ private data class Species(
 
 private val SPECIES = listOf(
     Species(
-        "Roach", 0.4f, 1.2f, 0.55f, 0.30f, "small",
+        "Roach", 0.25f, 3.5f, 0.5f, 0.30f, "small",
         Color(0xFF3E4C55), Color(0xFFA9B4B8), Color(0xFFDDE2DE), Color(0xFFB0604C),
     ),
     Species(
-        "Tench", 2f, 6f, 0.8f, 0.33f, "small",
+        "Tench", 1.2f, 12f, 0.85f, 0.33f, "small",
         Color(0xFF1B2715), Color(0xFF3E5A2B), Color(0xFF7A7F44), Color(0xFF1E2A16),
     ),
     Species(
-        "Bream", 3f, 9f, 0.7f, 0.42f, "small",
+        "Bream", 1.5f, 18f, 0.7f, 0.44f, "small",
         Color(0xFF332E1F), Color(0xFF8A7C55), Color(0xFFC7C0A6), Color(0xFF2A261B),
     ),
     Species(
-        "Common carp", 8f, 24f, 1f, 0.36f, "small",
+        "Leather carp", 5f, 42f, 1.25f, 0.38f, "none",
+        Color(0xFF241F13), Color(0xFF5C5330), Color(0xFF8E8256), Color(0xFF2A2416),
+    ),
+    Species(
+        "Common carp", 5f, 50f, 1.05f, 0.36f, "small",
         Color(0xFF33351A), Color(0xFF8B7A36), Color(0xFFC6B478), Color(0xFF4A3F20),
     ),
     Species(
-        "Mirror carp", 12f, 34f, 1.15f, 0.38f, "plates",
+        "Mirror carp", 6f, 60f, 1.2f, 0.385f, "plates",
         Color(0xFF2A2C16), Color(0xFF6F6331), Color(0xFFA2946A), Color(0xFF3A3218),
-    ),
-    Species(
-        "Leather carp", 18f, 42f, 1.3f, 0.39f, "none",
-        Color(0xFF241F13), Color(0xFF5C5330), Color(0xFF8E8256), Color(0xFF2A2416),
     ),
 )
 
@@ -134,63 +135,128 @@ private const val PREFS = "rr_game"
 private enum class Phase { Ready, Power, Waiting, Hooked, Landed, Lost }
 
 /**
- * What you put on the hook decides what can take it, the way it does on the
- * bank. Corn will catch anything with a mouth; a big boilie is a carp bait and
- * nothing else is going to bother with it, which is the whole point of using
- * one. The wait is longer for the carp baits because carp take their time.
+ * Bait is a set of odds, not a menu. Every bait can catch every fish here,
+ * the way it works on the bank: a carp will take a grain of corn meant for
+ * the roach, and a bream will pick up a boilie if it finds one first. What
+ * changes is how likely each is, how long you wait, and how often the swim
+ * gives you nothing at all.
  *
- * Same three baits, same species lists and same waits as the website.
+ * Deliberately unlabelled. Working out what to put on the hook is the part of
+ * fishing worth keeping, and a caption saying "use this one for the big ones"
+ * throws it away. Same odds and same waits as the website.
  */
 private data class Bait(
     val id: String,
     val name: String,
     val note: String,
-    val species: List<String>,
+    val odds: Map<String, Int>,
     val soonest: Float,
     val latest: Float,
+    val blank: Float,
 )
 
 private val BAITS = listOf(
     Bait(
-        "corn", "Sweetcorn", "Anything with a mouth",
-        listOf("Roach", "Bream", "Tench", "Common carp"), 0.7f, 2.2f,
+        "corn", "Sweetcorn", "A grain on the hair",
+        mapOf(
+            "Roach" to 34, "Tench" to 18, "Bream" to 24,
+            "Leather carp" to 2, "Common carp" to 16, "Mirror carp" to 6,
+        ),
+        2.0f, 6.0f, 0.18f,
     ),
     Bait(
-        "worm", "Lobworm", "Tench and bream love it",
-        listOf("Roach", "Tench", "Bream", "Common carp"), 0.9f, 2.6f,
+        "worm", "Lobworm", "Lively on the hook",
+        mapOf(
+            "Roach" to 22, "Tench" to 30, "Bream" to 26,
+            "Leather carp" to 2, "Common carp" to 14, "Mirror carp" to 6,
+        ),
+        2.2f, 6.5f, 0.20f,
     ),
     Bait(
-        "boilie", "Boilie", "Carp only, and the big ones",
-        listOf("Common carp", "Mirror carp", "Leather carp"), 1.6f, 4.2f,
+        "boilie", "Boilie", "Rolled, boiled, hard",
+        mapOf(
+            "Roach" to 2, "Tench" to 8, "Bream" to 6,
+            "Leather carp" to 14, "Common carp" to 38, "Mirror carp" to 32,
+        ),
+        3.5f, 11f, 0.30f,
     ),
 )
 
 private fun baitById(id: String): Bait = BAITS.firstOrNull { it.id == id } ?: BAITS.first()
 
 /**
- * The bait sets which fish are in the running; the cast then reaches into that
- * list, because the further out you drop it the deeper the water and the
- * better the fish sitting in it. SPECIES is in size order, so reaching further
- * along the pool means reaching a bigger fish.
+ * Which fish finds the bait. The odds come from what is on the hook; the cast
+ * then tilts them, because the far bank is where the older fish sit and a bait
+ * dropped short is a bait among the small stuff.
+ *
+ * The tilt is a multiplier that grows with the species' place in the list, so
+ * a long cast does not make small fish impossible - only less likely, which is
+ * the honest version.
  */
 private fun pickSpecies(power: Float, baitId: String): Species {
-    val pool = SPECIES.filter { it.name in baitById(baitId).species }
-    val reach = (power * pool.size).toInt().coerceAtMost(pool.size - 1)
-    val from = (reach - 1).coerceAtLeast(0)
-    return pool.subList(from, reach + 1).random()
+    val odds = baitById(baitId).odds
+    val weights = SPECIES.mapIndexed { index, species ->
+        (odds[species.name] ?: 0) * (1f + power * index * 0.35f)
+    }
+
+    var roll = Random.nextFloat() * weights.sum()
+
+    for (i in SPECIES.indices) {
+        roll -= weights[i]
+        if (roll <= 0f) {
+            return SPECIES[i]
+        }
+    }
+
+    return SPECIES.first()
 }
 
-private fun weigh(species: Species): Float {
-    // Two rolls averaged, so the middle of the range is the common result and
-    // a personal best actually means something.
-    val roll = (Random.nextFloat() + Random.nextFloat()) / 2f
-    return species.min + (species.max - species.min) * roll
+/**
+ * How heavy it is.
+ *
+ * Three random numbers multiplied together, which sounds arbitrary and is not:
+ * it produces a curve shaped like a real head of fish. Most of what you catch
+ * sits near the bottom of the range, a twenty is a good day, a thirty is a
+ * talking point, and the top of the range is a fish most anglers never see. On
+ * the carp curve that is roughly one fish in six over twenty pounds, one in
+ * twenty over thirty, and a fifty about once in seven hundred.
+ *
+ * A good cast lifts the whole curve slightly rather than adding pounds to the
+ * answer, so distance improves the odds without buying a fish.
+ *
+ * The same three lines run on the website. They have to stay the same, and the
+ * ranges have to stay inside SPECIES_RANGE in gameleaderboard.ts, or the
+ * server refuses the fish when it goes to the board.
+ */
+private fun weigh(species: Species, power: Float): Float {
+    val roll = Random.nextFloat() * Random.nextFloat() * Random.nextFloat()
+    val lifted = roll.toDouble().pow((1f - power * 0.22f).toDouble()).toFloat()
+
+    return species.min + (species.max - species.min) * lifted
+}
+
+/**
+ * How big that weight looks. Mass goes with the cube of length, so a fish four
+ * times the weight is only about one and a half times as long - but it is a
+ * great deal deeper, and depth is what the eye reads as size. Both come off
+ * the same number, so a fifty cannot be drawn as a long thin thing.
+ */
+private data class Build(val length: Float, val depth: Float)
+
+private fun proportions(species: Species, weight: Float): Build {
+    val average = (species.min + species.max * 0.35f) / 2f
+    val ratio = maxOf(0.2f, weight / maxOf(0.1f, average)).toDouble()
+
+    return Build(
+        length = ratio.pow(1.0 / 3.0).toFloat(),
+        depth = minOf(1.42f, ratio.pow(1.0 / 5.0).toFloat()),
+    )
 }
 
 /**
  * The log is one best weight per species, which is how an angler actually
  * keeps score. It also gives the game somewhere to go: six species, six
- * personal bests, and a boilie is the only way to reach the last two.
+ * personal bests, and no note anywhere saying how to fill them in.
  */
 private fun readLog(context: Context): Map<String, Float> {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -265,32 +331,96 @@ fun GameScreen(
                 Phase.Waiting -> {
                     hidden.sinceCast += dt
                     hidden.taking = hidden.sinceCast >= hidden.biteAt &&
-                        hidden.sinceCast <= hidden.biteAt + 1.1f
-                    if (hidden.sinceCast > hidden.biteAt + 1.1f) {
+                        hidden.sinceCast <= hidden.biteEnds
+                    hidden.dipping = hidden.liners.any {
+                        hidden.sinceCast >= it && hidden.sinceCast <= it + 0.26f
+                    }
+
+                    if (hidden.sinceCast > hidden.biteEnds) {
                         phase = Phase.Ready
-                        message = "It let go. Tap to cast again."
+                        hidden.species = null
+                        message = "Too slow, it let go. Tap to cast again."
+                    } else if (hidden.sinceCast > hidden.blankAt) {
+                        phase = Phase.Ready
+                        hidden.species = null
+                        message = "Nothing doing in that swim. Tap to cast again."
                     }
                 }
 
                 Phase.Hooked -> {
-                    val fight = hidden.species?.fight ?: 1f
-                    if (hidden.pulling) {
-                        tension += dt * (0.36f + fight * 0.24f)
-                        reeled += dt * 0.26f
-                    } else {
-                        tension -= dt * 0.62f
-                        reeled -= dt * 0.04f
+                    val species = hidden.species ?: SPECIES.first()
+                    val fight = species.fight
+
+                    // How big this one is for its kind, nought to one. A fish
+                    // near the top of its range runs harder, runs more often
+                    // and gives up less.
+                    val heft = (hidden.weight / species.max).coerceIn(0f, 1f)
+
+                    hidden.sinceCast += dt
+
+                    if (hidden.running && hidden.sinceCast >= hidden.runUntil) {
+                        hidden.running = false
+                        hidden.nextRun = hidden.sinceCast + 0.8f +
+                            Random.nextFloat() * (2.4f - heft * 1.2f)
+                        message = "Now. Pump it in."
+                    } else if (
+                        !hidden.running &&
+                        hidden.nextRun > 0f &&
+                        hidden.sinceCast >= hidden.nextRun &&
+                        reeled < 0.9f
+                    ) {
+                        hidden.running = true
+                        hidden.runUntil = hidden.sinceCast + 0.5f +
+                            Random.nextFloat() * (0.6f + 1.1f * heft)
+                        message = "Running again. Ease off."
                     }
-                    tension = tension.coerceIn(0f, 1.2f)
+
+                    // Holding on gains line - but not while it is running,
+                    // when all you can do is keep the rod bent and let it go.
+                    // That is what playing a big fish is, and it is why a
+                    // fifty takes a while to come in.
+                    if (hidden.pulling) {
+                        tension += dt * (
+                            0.40f + fight * 0.28f + if (hidden.running) 0.80f + heft else 0f
+                            )
+                        reeled += dt * (if (hidden.running) 0.015f else 0.21f - heft * 0.08f)
+                    } else {
+                        tension -= dt * 0.72f
+                        reeled -= dt * (if (hidden.running) 0.15f + heft * 0.15f else 0.045f)
+                    }
+
+                    if (hidden.running && !hidden.pulling) {
+                        tension += dt * (0.22f + heft * 0.34f)
+                    }
+
+                    tension = tension.coerceIn(0f, 1.25f)
                     reeled = reeled.coerceIn(0f, 1f)
 
-                    if (tension >= 1f) {
+                    // Two ways to lose it, pulling against each other. Hold
+                    // too hard and the hook comes out; give it too much and it
+                    // buries itself in the far bank. Neither is instant -
+                    // there is a moment to feel it and put it right, which is
+                    // the difference between difficult and unfair.
+                    hidden.overFor = if (tension >= 1f) hidden.overFor + dt else 0f
+                    hidden.slackFor = if (tension <= 0.10f) hidden.slackFor + dt else 0f
+
+                    if (hidden.overFor > 0.52f || hidden.slackFor > 1.3f) {
+                        val pulled = hidden.overFor > 0.52f
+
                         lostCount += 1
+                        hidden.running = false
+                        hidden.pulling = false
+                        hidden.species = null
                         phase = Phase.Lost
-                        message = "Line snapped. Tap to cast again."
+                        message = if (pulled) {
+                            "Hook pulled. Tap to cast again."
+                        } else {
+                            "Slack line, and it found the snags. Tap to cast again."
+                        }
                     } else if (reeled >= 1f) {
-                        val species = hidden.species ?: SPECIES.first()
-                        val weight = weigh(species)
+                        // The weight was settled when the cast went out, so
+                        // the fish you fought is the fish you land.
+                        val weight = hidden.weight
 
                         caught = species.name to weight
                         landedCount += 1
@@ -307,6 +437,8 @@ fun GameScreen(
                         // Onto the weekly board as well as the local log.
                         viewModel.record(species.name, weight)
 
+                        hidden.running = false
+                        hidden.pulling = false
                         phase = Phase.Landed
                         message = if (record) {
                             "${species.name}, ${formatWeight(weight)}. Your best yet."
@@ -327,34 +459,78 @@ fun GameScreen(
                 power = 0f
                 hidden.powerDir = 1f
                 hidden.taking = false
+                hidden.dipping = false
+                hidden.species = null
                 phase = Phase.Power
                 message = "Tap again to set the cast"
             }
 
             Phase.Power -> {
                 val chosen = baitById(bait)
+                val species = pickSpecies(power, bait)
+                val wait = chosen.soonest + Random.nextFloat() * (chosen.latest - chosen.soonest)
 
                 hidden.sinceCast = 0f
-                hidden.biteAt = chosen.soonest + Random.nextFloat() * (chosen.latest - chosen.soonest)
-                hidden.species = pickSpecies(power, bait)
-                phase = Phase.Waiting
-                message = if (chosen.id == "boilie") {
-                    "Watch the float. Carp take their time."
+                hidden.species = species
+                hidden.weight = weigh(species, power)
+                hidden.pulling = false
+                hidden.running = false
+                hidden.overFor = 0f
+                hidden.slackFor = 0f
+
+                hidden.liners = if (Random.nextFloat() < 0.55f) {
+                    List(1 + Random.nextInt(2)) {
+                        0.5f + Random.nextFloat() * maxOf(0.4f, wait - 0.3f)
+                    }.sorted()
                 } else {
-                    "Watch the float"
+                    emptyList()
                 }
+
+                if (Random.nextFloat() < chosen.blank) {
+                    // Nothing is coming to this one. You still have to fish it
+                    // out to find that, which is the point of it being there.
+                    hidden.biteAt = Float.MAX_VALUE
+                    hidden.biteEnds = Float.MAX_VALUE
+                    hidden.blankAt = chosen.latest + 1.8f
+                } else {
+                    hidden.biteAt = wait
+                    // A take is a moment, not the second and a bit this used
+                    // to allow. A confident fish gives a little longer than a
+                    // fussy one.
+                    hidden.biteEnds = wait + 0.26f + species.fight * 0.18f
+                    hidden.blankAt = Float.MAX_VALUE
+                }
+
+                phase = Phase.Waiting
+                message = "Watch the float"
             }
 
             Phase.Waiting -> {
                 if (hidden.taking) {
-                    tension = 0.25f
+                    val fight = hidden.species?.fight ?: 1f
+
+                    tension = 0.42f
                     reeled = 0f
                     hidden.pulling = false
+                    hidden.running = true
+                    hidden.sinceCast = 0f
+                    hidden.runUntil = 0.7f + Random.nextFloat() * 0.5f * fight
+                    hidden.nextRun = 0f
+                    hidden.overFor = 0f
+                    hidden.slackFor = 0f
                     phase = Phase.Hooked
-                    message = "Hold to reel. Keep the line out of the red."
+                    message = "It is running. Give it line."
                 } else {
+                    val liner = hidden.liners.any {
+                        hidden.sinceCast >= it && hidden.sinceCast <= it + 0.26f
+                    }
+
                     phase = Phase.Ready
-                    message = "Struck too early. Tap to cast again."
+                    hidden.species = null
+                    message = when {
+                        liner -> "Liner - nothing on the hook. Tap to cast again."
+                        else -> "Struck at nothing. Tap to cast again."
+                    }
                 }
             }
 
@@ -442,7 +618,8 @@ fun GameScreen(
                     power = power,
                     tension = tension,
                     reeled = reeled,
-                    taking = hidden.taking,
+                    taking = hidden.taking || hidden.dipping,
+                    weight = hidden.weight,
                     clock = swim,
                 )
             }
@@ -539,10 +716,39 @@ fun GameScreen(
 private class Hidden {
     var powerDir = 1f
     var sinceCast = 0f
+
+    /** When the take starts and ends, in seconds since the cast landed. */
     var biteAt = 0f
+    var biteEnds = 0f
+
+    /** When to give up on a swim that was never going to produce anything. */
+    var blankAt = Float.MAX_VALUE
+
+    /**
+     * Liners: a fish brushing the line rather than taking the bait. Each entry
+     * is the second it starts, and it moves the float exactly the way a bite
+     * does. Striking one costs the cast, and nothing on screen tells them
+     * apart - which is the difficulty of float fishing, put into the game.
+     */
+    var liners: List<Float> = emptyList()
+
     var taking = false
+    var dipping = false
     var pulling = false
+
+    /** A hooked fish runs, and while it runs you cannot gain any line. */
+    var running = false
+    var runUntil = 0f
+    var nextRun = 0f
+
+    /** How long the line has been over-loaded or slack, for the two ways to lose it. */
+    var overFor = 0f
+    var slackFor = 0f
+
     var species: Species? = null
+
+    /** Settled when the cast goes out, so the fish you play is the fish you land. */
+    var weight = 0f
 }
 
 @Composable
@@ -850,6 +1056,7 @@ private fun DrawScope.drawScene(
     tension: Float,
     reeled: Float,
     taking: Boolean,
+    weight: Float,
     clock: Float,
 ) {
     val w = size.width
@@ -867,7 +1074,7 @@ private fun DrawScope.drawScene(
 
     drawLilies(w, h, horizon, clock)
 
-    val mouth = drawFish(phase, species, w, h, floatX, floatY, distance, reeled, clock)
+    val mouth = drawFish(phase, species, weight, w, h, floatX, floatY, distance, reeled, clock)
 
     drawRodAndLine(phase, tension, w, h, mouth?.x ?: floatX, mouth?.y ?: floatY, clock)
 
@@ -1094,8 +1301,18 @@ private fun DrawScope.drawReeds(w: Float, h: Float, horizon: Float, t: Float) {
  * depth is the whole body depth, so the outline is built from half of it.
  * Using the whole figure for each half makes a carp into a dinner plate.
  */
-private fun DrawScope.drawCarp(species: Species, length: Float, flex: Float, sink: Float) {
-    val d = length * species.depth * 0.5f
+private fun DrawScope.drawCarp(
+    species: Species,
+    length: Float,
+    flex: Float,
+    sink: Float,
+    depthMul: Float = 1f,
+) {
+    // depthMul carries the weight of this particular fish. A forty is not
+    // just a longer twenty - it is a far deeper one, and depth is what the
+    // eye reads as size. Without it every carp looked identical whatever the
+    // scales said, which made the number under the fish meaningless.
+    val d = length * species.depth * depthMul * 0.5f
     val edge = maxOf(0.6f, length * 0.006f)
 
     val body = Pen()
@@ -1272,6 +1489,7 @@ private fun DrawScope.drawCarp(species: Species, length: Float, flex: Float, sin
 private fun DrawScope.drawFish(
     phase: Phase,
     species: Species?,
+    weight: Float,
     w: Float,
     h: Float,
     floatX: Float,
@@ -1284,14 +1502,19 @@ private fun DrawScope.drawFish(
         return null
     }
 
+    // How this particular fish is built, from what it actually weighs.
+    val build = proportions(species, weight)
+
     if (phase == Phase.Waiting) {
-        // Only a shape moving under the surface, which is all you would see.
+        // Only a shape moving under the surface, which is all you would see -
+        // and it is the true size of the fish down there, so a good one is
+        // worth spotting before it ever takes.
         val x = floatX - 50f + sin(t * 0.8f) * 26f
         val y = floatY + 22f + sin(t * 1.3f) * 4f
-        val length = 46f + distance * 54f
+        val length = (46f + distance * 54f) * build.length
 
         withTransform({ translate(x, y) }) {
-            drawCarp(species, length, sin(t * 3f) * 0.28f, 0.72f)
+            drawCarp(species, length, sin(t * 3f) * 0.28f, 0.78f, build.depth)
         }
 
         return null
@@ -1308,7 +1531,7 @@ private fun DrawScope.drawFish(
     val x = floatX + (rodX + 90f - floatX) * progress
     val surface = floatY + 20f
     val y = surface + (h * 0.74f - surface) * progress * 0.62f
-    val length = (54f + distance * 56f) * (1f + progress * 0.85f)
+    val length = (54f + distance * 56f) * (1f + progress * 0.85f) * build.length
     val beat = sin(t * (7f - progress * 2f)) * (0.34f - progress * 0.12f)
 
     // A played fish comes in head-up and rolling; a landed one is held
@@ -1334,7 +1557,7 @@ private fun DrawScope.drawFish(
         translate(x, y)
         rotate(roll * 180f / PI.toFloat(), Offset.Zero)
     }) {
-        drawCarp(species, length, beat, maxOf(0f, 0.50f - progress * 0.50f))
+        drawCarp(species, length, beat, maxOf(0f, 0.50f - progress * 0.50f), build.depth)
     }
 
     // The nose is the origin the fish is drawn from, so it is also where the
@@ -1378,7 +1601,7 @@ private fun DrawScope.drawRodAndLine(
         val ry = 3f + p * 4.4f
 
         drawOval(
-            Color(0x8CC8DC90),
+            Color(0x8C9B9B7E),
             Offset(x - rx, y - ry),
             Size(rx * 2, ry * 2),
             style = Stroke(width = 1.3f),
@@ -1388,12 +1611,12 @@ private fun DrawScope.drawRodAndLine(
     val reel = Offset(buttX + 14f, buttY - h * 0.14f)
     drawOval(Color(0xFF20261A), Offset(reel.x - 13f, reel.y - 17f), Size(26f, 34f))
     drawOval(
-        Color(0x73C8DC90),
+        Color(0x739B9B7E),
         Offset(reel.x - 13f, reel.y - 17f),
         Size(26f, 34f),
         style = Stroke(width = 1.4f),
     )
-    drawOval(Color(0x47C8DC90), Offset(reel.x - 5f, reel.y - 7f), Size(10f, 14f))
+    drawOval(Color(0x479B9B7E), Offset(reel.x - 5f, reel.y - 7f), Size(10f, 14f))
 
     // Slack hangs; under tension the line straightens and goes pale, then red.
     val sag = if (phase == Phase.Hooked) {
@@ -1454,7 +1677,7 @@ private fun DrawScope.drawFloat(
         Size(5.2f * scale, 14f * scale),
     )
     drawRect(
-        if (taking) Color(0xFFE9A25E) else Color(0xFFC8DC90),
+        if (taking) Color(0xFFE9A25E) else Color(0xFF9B9B7E),
         Offset(x - 1.5f * scale, cy - 14f * scale),
         Size(3f * scale, 13f * scale),
     )

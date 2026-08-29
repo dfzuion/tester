@@ -32,14 +32,23 @@ import { writeAudit } from "./audit";
  * server, which is a much bigger piece of work than the prize justifies.
  */
 
-/** Mirrors SPECIES in the clients. The ceiling is what stops silly weights. */
+/**
+ * Mirrors SPECIES in the clients. The ceiling is what stops silly weights,
+ * and it sits a little above the client's own maximum on purpose: the client
+ * rounds to two decimals and a fish drawn exactly at the top of its range
+ * should not be refused by a rounding hair.
+ *
+ * A mirror can reach sixty here because a mirror can reach sixty in England.
+ * It will happen to roughly one angler in a thousand casts, which is about
+ * right for a fish that makes the papers when it comes out for real.
+ */
 const SPECIES_RANGE: Record<string, { min: number; max: number }> = {
-  "Roach": { min: 0.4, max: 1.2 },
-  "Tench": { min: 2, max: 6 },
-  "Bream": { min: 3, max: 9 },
-  "Common carp": { min: 8, max: 24 },
-  "Mirror carp": { min: 12, max: 34 },
-  "Leather carp": { min: 18, max: 42 },
+  "Roach": { min: 0.2, max: 4 },
+  "Tench": { min: 1, max: 13 },
+  "Bream": { min: 1.5, max: 19 },
+  "Common carp": { min: 4, max: 52 },
+  "Mirror carp": { min: 5, max: 62 },
+  "Leather carp": { min: 4, max: 44 },
 };
 
 export const GAME_PRIZE_PENCE = 1000;
