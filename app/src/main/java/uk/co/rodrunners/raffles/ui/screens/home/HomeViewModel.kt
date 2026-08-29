@@ -17,9 +17,11 @@ import uk.co.rodrunners.raffles.data.model.Banner
 import uk.co.rodrunners.raffles.data.model.Competition
 import uk.co.rodrunners.raffles.data.model.TicketGroup
 import uk.co.rodrunners.raffles.data.model.Winner
+import uk.co.rodrunners.raffles.data.repository.AccountRepository
 import uk.co.rodrunners.raffles.data.repository.AuthRepository
 import uk.co.rodrunners.raffles.data.repository.CompetitionRepository
 import uk.co.rodrunners.raffles.data.repository.ContentRepository
+import uk.co.rodrunners.raffles.data.repository.CreditRepository
 import uk.co.rodrunners.raffles.data.repository.EntryRepository
 import uk.co.rodrunners.raffles.data.repository.FavouritesRepository
 import uk.co.rodrunners.raffles.data.repository.ResultsRepository
@@ -35,6 +37,8 @@ data class HomeContent(
     val myActiveTickets: List<TicketGroup> = emptyList(),
     val favouriteIds: Set<String> = emptySet(),
     val displayName: String? = null,
+    val creditBalancePence: Int = 0,
+    val spinAvailable: Boolean = false,
     val showsDemoData: Boolean = false,
 ) {
     /**
@@ -57,6 +61,8 @@ class HomeViewModel @Inject constructor(
     private val content: ContentRepository,
     private val entries: EntryRepository,
     private val favourites: FavouritesRepository,
+    private val account: AccountRepository,
+    private val credit: CreditRepository,
     private val auth: AuthRepository,
 ) : ViewModel() {
 
@@ -64,6 +70,13 @@ class HomeViewModel @Inject constructor(
     val state: StateFlow<UiState<HomeContent>> = _state.asStateFlow()
 
     private val banners = MutableStateFlow<List<Banner>>(emptyList())
+
+    /**
+     * Whether today's free spin is still there. One read, refreshed with the
+     * rest of the screen - it does not need to be live, because nothing but
+     * this customer can use it up.
+     */
+    private val spinAvailable = MutableStateFlow(false)
 
     init {
         load()
@@ -74,6 +87,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { content.banners().banners.filter { it.active } }
                 .onSuccess { banners.value = it }
+        }
+
+        val uid = auth.currentUid
+
+        if (uid != null) {
+            viewModelScope.launch {
+                runCatching { credit.todaysSpin(uid) }
+                    .onSuccess { spinAvailable.value = it == null }
+            }
         }
     }
 
@@ -105,6 +127,15 @@ class HomeViewModel @Inject constructor(
                 .combine(
                     if (uid != null) favourites.favouriteIds(uid) else flowOf(emptySet())
                 ) { home, favs -> home.copy(favouriteIds = favs) }
+                .combine(
+                    if (uid != null) account.profile(uid) else flowOf(null)
+                ) { home, profile ->
+                    home.copy(
+                        displayName = profile?.displayName,
+                        creditBalancePence = profile?.creditBalancePence ?: 0,
+                    )
+                }
+                .combine(spinAvailable) { home, canSpin -> home.copy(spinAvailable = canSpin) }
                 .catch { t -> _state.value = UiState.Error(Errors.from(t)) }
                 .collect { home ->
                     _state.value = if (home.live.isEmpty() && home.recentlyCompleted.isEmpty()) {

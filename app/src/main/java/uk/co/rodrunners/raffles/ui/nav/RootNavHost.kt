@@ -167,6 +167,8 @@ fun RootNavHost(
                 onOpenAllCompetitions = { navController.navigate(Routes.COMPETITIONS) },
                 onOpenTickets = { requireSignIn { navController.navigate(Routes.TICKETS) } },
                 onOpenGame = { navController.navigate(Routes.GAME) },
+                onOpenSpin = { requireSignIn { navController.navigate(Routes.SPIN) } },
+                onOpenCredit = { requireSignIn { navController.navigate(Routes.CREDIT) } },
             )
         }
 

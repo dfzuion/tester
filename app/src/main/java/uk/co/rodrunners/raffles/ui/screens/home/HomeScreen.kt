@@ -48,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.rodrunners.raffles.R
+import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.core.TimeFormat
 import uk.co.rodrunners.raffles.data.model.Banner
 import uk.co.rodrunners.raffles.data.model.TicketGroup
@@ -77,6 +78,8 @@ fun HomeScreen(
     onOpenAllCompetitions: () -> Unit,
     onOpenTickets: () -> Unit,
     onOpenGame: () -> Unit,
+    onOpenSpin: () -> Unit,
+    onOpenCredit: () -> Unit,
     unreadCount: Int = 0,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -172,6 +175,17 @@ fun HomeScreen(
                     item { DemoDataBanner(Modifier.padding(horizontal = Dimens.gutter)) }
                 }
 
+                item {
+                    WelcomeStrip(
+                        displayName = home.displayName,
+                        creditBalancePence = home.creditBalancePence,
+                        spinAvailable = home.spinAvailable,
+                        liveCount = home.live.size,
+                        onOpenSpin = onOpenSpin,
+                        onOpenCredit = onOpenCredit,
+                    )
+                }
+
                 if (slides.isNotEmpty()) {
                     item {
                         Column {
@@ -211,6 +225,15 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+
+                item {
+                    QuickActions(
+                        onOpenSpin = onOpenSpin,
+                        onOpenGame = onOpenGame,
+                        onOpenTickets = onOpenTickets,
+                        onOpenResults = onOpenResults,
+                    )
                 }
 
                 if (home.myActiveTickets.isNotEmpty()) {
@@ -276,8 +299,6 @@ fun HomeScreen(
                         }
                     }
                 }
-
-                item { GameCard(onOpenGame) }
 
                 if (home.newest.isNotEmpty()) {
                     item { HorizontalCompetitionRow("New this week", home.newest, onOpenCompetition) }
@@ -447,39 +468,148 @@ private fun WinnerRow(winner: Winner) {
 }
 
 /**
- * A way into the fishing game, sat between the raffle rows. It sells itself as
- * something to do rather than something to win, because that is what it is.
+ * The first thing on the screen after the mark: who you are, what you are
+ * holding, and the one free thing waiting for you. The daily spin used to be
+ * three taps down inside Account, which is a strange place to keep the only
+ * part of the app that gives money away.
  */
 @Composable
-private fun GameCard(onOpenGame: () -> Unit) {
-    Column(
-        Modifier
-            .padding(horizontal = Dimens.gutter)
-            .fillMaxWidth()
-            .clip(RrrShapes.medium)
-            .background(RrrColors.Surface)
-            .clickable(onClick = onOpenGame)
-            .padding(18.dp),
-    ) {
+private fun WelcomeStrip(
+    displayName: String?,
+    creditBalancePence: Int,
+    spinAvailable: Boolean,
+    liveCount: Int,
+    onOpenSpin: () -> Unit,
+    onOpenCredit: () -> Unit,
+) {
+    Column(Modifier.padding(horizontal = Dimens.gutter)) {
         Text(
-            "BETWEEN DRAWS",
-            style = MaterialTheme.typography.labelSmall,
-            color = RrrColors.Khaki,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "Cast & catch",
-            style = MaterialTheme.typography.titleLarge,
+            if (displayName.isNullOrBlank()) "Welcome back" else "Welcome back, $displayName",
+            style = MaterialTheme.typography.titleMedium,
             color = RrrColors.Bone,
         )
-        Spacer(Modifier.height(6.dp))
+
+        Spacer(Modifier.height(4.dp))
+
         Text(
-            "Set the cast, strike when the float goes, and see what you can land. " +
-                "Free to play, as often as you like.",
-            style = MaterialTheme.typography.bodyMedium,
+            if (liveCount == 1) "1 raffle open right now" else "$liveCount raffles open right now",
+            style = MaterialTheme.typography.bodySmall,
             color = RrrColors.Mist,
         )
-        Spacer(Modifier.height(12.dp))
-        QuietButton("Have a go", onOpenGame)
+
+        Spacer(Modifier.height(14.dp))
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RrrShapes.medium)
+                    .background(RrrColors.Surface)
+                    .clickable(onClick = onOpenCredit)
+                    .padding(16.dp),
+            ) {
+                Text(
+                    "SITE CREDIT",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = RrrColors.Slate,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    Money.format(creditBalancePence),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = RrrColors.KhakiBright,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Spends like cash on any raffle",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = RrrColors.Mist,
+                )
+            }
+
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RrrShapes.medium)
+                    .background(if (spinAvailable) RrrColors.Khaki else RrrColors.Surface)
+                    .clickable(onClick = onOpenSpin)
+                    .padding(16.dp),
+            ) {
+                Text(
+                    if (spinAvailable) "READY" else "TOMORROW",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (spinAvailable) RrrColors.Ink else RrrColors.Slate,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Daily spin",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = if (spinAvailable) RrrColors.Ink else RrrColors.Bone,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (spinAvailable) "Up to £2 of credit, free" else "Today's spin is used",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (spinAvailable) RrrColors.Ink.copy(alpha = 0.75f) else RrrColors.Mist,
+                )
+            }
+        }
+    }
+}
+
+/** Four places people actually go, one tap from the top of the app. */
+@Composable
+private fun QuickActions(
+    onOpenSpin: () -> Unit,
+    onOpenGame: () -> Unit,
+    onOpenTickets: () -> Unit,
+    onOpenResults: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Dimens.gutter),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        QuickAction("Spin", "Free daily", Modifier.weight(1f), onOpenSpin)
+        QuickAction("Play", "Cast & catch", Modifier.weight(1f), onOpenGame)
+        QuickAction("Tickets", "Your entries", Modifier.weight(1f), onOpenTickets)
+        QuickAction("Winners", "Past draws", Modifier.weight(1f), onOpenResults)
+    }
+}
+
+@Composable
+private fun QuickAction(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier
+            .clip(RrrShapes.medium)
+            .background(RrrColors.Surface)
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp, horizontal = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = RrrColors.Bone,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.labelSmall,
+            color = RrrColors.Mist,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
