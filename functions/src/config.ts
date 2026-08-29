@@ -64,4 +64,6 @@ export const Collections = {
   mail: "mail",
   rateLimits: "rateLimits",
   dailySpins: "dailySpins",
+  gameScores: "gameScores",
+  gameWeeks: "gameWeeks",
 } as const;
