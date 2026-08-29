@@ -24,6 +24,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
 import uk.co.rodrunners.raffles.ui.screens.credit.CreditScreen
+import uk.co.rodrunners.raffles.ui.screens.game.GameScreen
 import uk.co.rodrunners.raffles.ui.screens.spin.SpinScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminUsersScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
@@ -165,6 +166,7 @@ fun RootNavHost(
                 onOpenResults = { navController.navigate(Routes.RESULTS) },
                 onOpenAllCompetitions = { navController.navigate(Routes.COMPETITIONS) },
                 onOpenTickets = { requireSignIn { navController.navigate(Routes.TICKETS) } },
+                onOpenGame = { navController.navigate(Routes.GAME) },
             )
         }
 
@@ -359,6 +361,10 @@ fun RootNavHost(
 
         composable(Routes.SPIN) {
             SpinScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.GAME) {
+            GameScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.ADMIN_COUPONS) {

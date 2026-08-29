@@ -76,6 +76,7 @@ fun HomeScreen(
     onOpenResults: () -> Unit,
     onOpenAllCompetitions: () -> Unit,
     onOpenTickets: () -> Unit,
+    onOpenGame: () -> Unit,
     unreadCount: Int = 0,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -276,6 +277,8 @@ fun HomeScreen(
                     }
                 }
 
+                item { GameCard(onOpenGame) }
+
                 if (home.newest.isNotEmpty()) {
                     item { HorizontalCompetitionRow("New this week", home.newest, onOpenCompetition) }
                 }
@@ -440,5 +443,43 @@ private fun WinnerRow(winner: Winner) {
             style = MaterialTheme.typography.labelSmall,
             color = RrrColors.Slate,
         )
+    }
+}
+
+/**
+ * A way into the fishing game, sat between the raffle rows. It sells itself as
+ * something to do rather than something to win, because that is what it is.
+ */
+@Composable
+private fun GameCard(onOpenGame: () -> Unit) {
+    Column(
+        Modifier
+            .padding(horizontal = Dimens.gutter)
+            .fillMaxWidth()
+            .clip(RrrShapes.medium)
+            .background(RrrColors.Surface)
+            .clickable(onClick = onOpenGame)
+            .padding(18.dp),
+    ) {
+        Text(
+            "BETWEEN DRAWS",
+            style = MaterialTheme.typography.labelSmall,
+            color = RrrColors.Khaki,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Cast & catch",
+            style = MaterialTheme.typography.titleLarge,
+            color = RrrColors.Bone,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Set the cast, strike when the float goes, and see what you can land. " +
+                "Free to play, as often as you like.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = RrrColors.Mist,
+        )
+        Spacer(Modifier.height(12.dp))
+        QuietButton("Have a go", onOpenGame)
     }
 }
