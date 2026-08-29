@@ -25,10 +25,14 @@ object RrrColors {
     val KhakiBright = Color(0xFFC8DC90)
     val KhakiDim = Color(0x3DA5C05C)
 
-    /** Bronze-brown stays reserved for money and prizes, so it keeps its punch. */
-    val Gold = Color(0xFFC07934)
-    val GoldBright = Color(0xFFDB9A50)
-    val GoldDim = Color(0x3DC07934)
+    /**
+     * Bronze is out. Scott asked for no gold anywhere, on the app as well as
+     * the site, so these now carry the khaki family. The names stay put: 84
+     * call sites use them, and renaming would be a large diff for no gain.
+     */
+    val Gold = Color(0xFFA5C05C)
+    val GoldBright = Color(0xFFC8DC90)
+    val GoldDim = Color(0x3DA5C05C)
 
     val Bone = Color(0xFFF0EBDB)         // primary type
     val Mist = Color(0xFF8E9678)         // secondary type
@@ -41,8 +45,8 @@ object RrrColors {
     /** Top of the masthead gradient - warm, so the camo band reads as fabric. */
     val HeaderTop = Color(0xFF161A11)
 
-    /** Deep bark brown, for fills that need weight without going flat black. */
-    val Bark = Color(0xFF3A2A1B)
+    /** A dark olive for fills that need weight without going flat black. */
+    val Bark = Color(0xFF23291B)
 
     /** Weed green from the logo - used for subtle "live"/open states. */
     val Weed = Color(0xFF6E8446)
