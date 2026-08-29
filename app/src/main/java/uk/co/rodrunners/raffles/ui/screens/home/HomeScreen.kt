@@ -1,5 +1,6 @@
 package uk.co.rodrunners.raffles.ui.screens.home
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,9 +30,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.rodrunners.raffles.R
 import uk.co.rodrunners.raffles.core.TimeFormat
@@ -136,6 +143,25 @@ fun HomeScreen(
             onRetry = viewModel::load,
             onEmptyAction = onOpenResults,
         ) { home ->
+            // The featured slot rotates through the live raffles rather than
+            // showing one and stopping. Crossfade rather than a pager: the
+            // pager APIs have moved around between Compose versions and this
+            // needs nothing a fade cannot do.
+            val slides = remember(home.featured, home.live) {
+                (listOfNotNull(home.featured) +
+                    home.live.filter { it.id != home.featured?.id }).take(5)
+            }
+            var slide by remember(slides.size) { mutableStateOf(0) }
+
+            LaunchedEffect(slides.size) {
+                if (slides.size > 1) {
+                    while (true) {
+                        delay(6000)
+                        slide = (slide + 1) % slides.size
+                    }
+                }
+            }
+
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 32.dp),
@@ -145,13 +171,44 @@ fun HomeScreen(
                     item { DemoDataBanner(Modifier.padding(horizontal = Dimens.gutter)) }
                 }
 
-                home.featured?.let { featured ->
+                if (slides.isNotEmpty()) {
                     item {
-                        FeaturedCompetitionCard(
-                            competition = featured,
-                            onClick = { onOpenCompetition(featured.id) },
-                            modifier = Modifier.padding(horizontal = Dimens.gutter),
-                        )
+                        Column {
+                            Crossfade(
+                                targetState = slides[slide % slides.size],
+                                label = "featured",
+                            ) { competition ->
+                                FeaturedCompetitionCard(
+                                    competition = competition,
+                                    onClick = { onOpenCompetition(competition.id) },
+                                    modifier = Modifier.padding(horizontal = Dimens.gutter),
+                                )
+                            }
+
+                            if (slides.size > 1) {
+                                Spacer(Modifier.height(12.dp))
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    slides.indices.forEach { i ->
+                                        val on = i == slide % slides.size
+                                        Box(
+                                            Modifier
+                                                .padding(horizontal = 3.dp)
+                                                .height(8.dp)
+                                                .width(if (on) 22.dp else 8.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (on) RrrColors.Khaki
+                                                    else RrrColors.Slate
+                                                )
+                                                .clickable { slide = i }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
