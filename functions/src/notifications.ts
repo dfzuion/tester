@@ -12,7 +12,7 @@ import { requireAdmin } from "./guards";
  */
 
 export interface UserNotification {
-  category: "purchase" | "win" | "ending_soon" | "new_competition" | "promotion" | "account" | "payment" | "refund" | "support" | "admin";
+  category: "purchase" | "win" | "ending_soon" | "new_competition" | "promotion" | "account" | "payment" | "refund" | "support" | "admin" | "game";
   title: string;
   body: string;
   deepLink?: string;
@@ -91,6 +91,14 @@ function channelFor(category: string): string {
  * copy stays editable; these are the floor, not a replacement.
  */
 const DEFAULT_TEMPLATES: Record<string, { subject: string; html: string }> = {
+  game_week_won: {
+    subject: "You topped Cast & Catch this week",
+    html: `<p>Hi {{displayName}},</p>
+<p>Your {{species}} at <strong>{{weight}} lb</strong> was the heaviest fish anyone landed in week {{weekKey}}.</p>
+<p><strong>£10 of site credit</strong> is in your account now. It spends like cash on any raffle.</p>
+<p>The board has started again, so it is anyone's week.</p>
+<p>Rod Runners Raffles</p>`,
+  },
   winner_notification: {
     subject: "You've won {{prizeName}}",
     html: `<p>Hi {{displayName}},</p>

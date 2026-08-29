@@ -59,3 +59,4 @@ export {
 export { notifyEndingSoon, deliverQueuedMail, listMailQueue, retryFailedMail } from "./notifications";
 export { seedDemoData } from "./seed";
 export { createSupportTicket, replyToTicket } from "./support";
+export { submitGameCatch, gameLeaderboard, awardGameWeek } from "./gameleaderboard";
