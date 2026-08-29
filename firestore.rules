@@ -89,11 +89,6 @@ service cloud.firestore {
     }
 
     /**
-     * Unclaimed prizes are invisible to every client - knowing which numbers
-     * are loaded would break the game. A won prize is readable by the person
-     * who won it, and by anyone for the public "recent wins" feed.
-     */
-    /**
      * Credit is server-money: the balance lives on the user document and every
      * movement is an immutable ledger row. Customers read their own ledger and
      * nothing else; only the Admin SDK ever writes here.
@@ -114,6 +109,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /**
+     * Unclaimed prizes are invisible to every client - knowing which numbers
+     * are loaded would break the game. A won prize is readable by the person
+     * who won it, and by anyone for the public "recent wins" feed.
+     */
     match /instantWins/{id} {
       allow get, list: if isAdmin()
         || (resource.data.status == "won"
