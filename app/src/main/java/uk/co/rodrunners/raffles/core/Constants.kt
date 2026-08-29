@@ -17,6 +17,7 @@ object Collections {
     const val AUDIT_LOGS = "auditLogs"
     const val INSTANT_WINS = "instantWins"
     const val CREDIT_LEDGER = "creditLedger"
+    const val DAILY_SPINS = "dailySpins"
 }
 
 object Functions {
@@ -50,6 +51,7 @@ object Functions {
     const val CREATE_COUPON = "createCreditCoupon"
     const val LIST_COUPONS = "listCreditCoupons"
     const val SET_COUPON_ACTIVE = "setCreditCouponActive"
+    const val SPIN_DAILY_WHEEL = "spinDailyWheel"
     const val GRANT_CREDIT = "grantCredit"
 }
 

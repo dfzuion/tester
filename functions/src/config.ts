@@ -55,4 +55,5 @@ export const Collections = {
   emailTemplates: "emailTemplates",
   mail: "mail",
   rateLimits: "rateLimits",
+  dailySpins: "dailySpins",
 } as const;

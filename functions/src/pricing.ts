@@ -93,10 +93,14 @@ export async function computePrice(params: {
 
   const feePence: number = c.bookingFeePence ?? 0;
   const total = Math.max(0, bundled - promoDiscount) + feePence;
-  if (total < 30 && total !== 0) {
-    // Stripe's GBP minimum charge.
-    throw new HttpsError("failed-precondition", "The minimum card payment is £0.30.");
-  }
+
+  // Stripe's 30p GBP floor used to be enforced here, on the basket total. That
+  // was the wrong place twice over: it rejected a penny raffle outright, even
+  // though penny entries are normal in this market and only become a card
+  // payment once someone buys a sensible number of them, and it fired even when
+  // site credit meant no card was involved at all. The floor belongs where the
+  // card is actually charged - see createOrderAndPaymentIntent, which knows the
+  // amount due after credit.
 
   return {
     competition: c,

@@ -11,7 +11,8 @@ export type AuditAction =
   | "instantwin.added" | "instantwin.removed" | "instantwin.awarded"
   | "instantwin.claim.updated"
   | "credit.coupon.created" | "credit.coupon.updated" | "credit.coupon.redeemed"
-  | "credit.granted" | "credit.spent" | "credit.returned";
+  | "credit.granted" | "credit.spent" | "credit.returned"
+  | "credit.daily_spin";
 
 export interface AuditParams {
   action: AuditAction;

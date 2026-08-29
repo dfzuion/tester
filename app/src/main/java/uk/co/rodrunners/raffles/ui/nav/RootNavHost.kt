@@ -24,6 +24,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
 import uk.co.rodrunners.raffles.ui.screens.credit.CreditScreen
+import uk.co.rodrunners.raffles.ui.screens.spin.SpinScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminUsersScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CompetitionEditorScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.CouponsScreen
@@ -350,7 +351,14 @@ fun RootNavHost(
         }
 
         composable(Routes.CREDIT) {
-            CreditScreen(onBack = { navController.popBackStack() })
+            CreditScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSpin = { navController.navigate(Routes.SPIN) },
+            )
+        }
+
+        composable(Routes.SPIN) {
+            SpinScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.ADMIN_COUPONS) {

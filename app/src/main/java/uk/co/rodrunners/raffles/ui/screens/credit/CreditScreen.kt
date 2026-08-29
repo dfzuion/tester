@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.rodrunners.raffles.core.Money
 import uk.co.rodrunners.raffles.core.TimeFormat
 import uk.co.rodrunners.raffles.ui.components.GoldButton
+import uk.co.rodrunners.raffles.ui.components.QuietButton
 import uk.co.rodrunners.raffles.ui.components.SectionHeader
 import uk.co.rodrunners.raffles.ui.screens.auth.RrrTextField
 import uk.co.rodrunners.raffles.ui.theme.Dimens
@@ -47,6 +48,7 @@ import uk.co.rodrunners.raffles.ui.theme.RrrType
 @Composable
 fun CreditScreen(
     onBack: () -> Unit,
+    onOpenSpin: () -> Unit = {},
     viewModel: CreditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -100,6 +102,11 @@ fun CreditScreen(
                         color = RrrColors.Mist,
                     )
                 }
+            }
+
+            item { Spacer(Modifier.height(4.dp)); SectionHeader("Free credit") }
+            item {
+                QuietButton("Take today's spin", onOpenSpin)
             }
 
             item { Spacer(Modifier.height(4.dp)); SectionHeader("Got a code?") }

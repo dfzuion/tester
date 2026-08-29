@@ -26,6 +26,8 @@ export {
   registerFcmToken,
 } from "./admin";
 
+export { spinDailyWheel } from "./dailyspin";
+
 export {
   createCompetition,
   updateCompetition,

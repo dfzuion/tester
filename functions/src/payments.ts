@@ -22,6 +22,9 @@ function stripe(): Stripe {
 const RESERVATION_TTL_MS = 15 * 60 * 1000;
 
 /** Step 1 of checkout: price the basket. Read-only, no numbers reserved yet. */
+/** Stripe's floor for a GBP charge. Nothing to do with what a raffle may cost. */
+const STRIPE_MINIMUM_PENCE = 30;
+
 export const quoteBasket = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
   const uid = requireAuth(req);
   const { competitionId, quantity, promoCode } = req.data ?? {};
@@ -76,6 +79,18 @@ export const createOrderAndPaymentIntent = onCall(
     const availableCredit = Math.max(0, Number(user.creditBalancePence ?? 0));
     const creditApplied = Math.min(requestedCredit, availableCredit, breakdown.totalPence);
     const amountDue = breakdown.totalPence - creditApplied;
+
+    // Stripe will not take less than 30p in GBP. Checked here rather than on the
+    // basket total, so a penny raffle is fine as long as the card is asked for
+    // at least 30p - and fine at any size when credit covers the lot. Checked
+    // before the transaction, so a rejected order reserves no entry numbers.
+    if (amountDue > 0 && amountDue < STRIPE_MINIMUM_PENCE) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Card payments start at £${(STRIPE_MINIMUM_PENCE / 100).toFixed(2)}. ` +
+        "Add a few more entries, or use your site credit."
+      );
+    }
 
     const numbers = await db.runTransaction(async (tx) => {
       // Firestore will not allow a read after a write in the same

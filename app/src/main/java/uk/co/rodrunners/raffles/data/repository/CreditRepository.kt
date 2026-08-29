@@ -13,6 +13,7 @@ import uk.co.rodrunners.raffles.core.Collections
 import uk.co.rodrunners.raffles.core.Functions
 import uk.co.rodrunners.raffles.data.model.CreditCoupon
 import uk.co.rodrunners.raffles.data.model.CreditEntry
+import uk.co.rodrunners.raffles.data.model.SpinOutcome
 
 /**
  * Site credit. The balance itself lives on the user profile; this repository
@@ -46,6 +47,38 @@ class CreditRepository @Inject constructor(
         val balance = (data["balancePence"] as? Number)?.toInt() ?: 0
         return value to balance
     }
+
+    /**
+     * Today's spin, or null if it has not been used. The document id is the uid
+     * and the London date, which the rules allow a customer to read for
+     * themselves - cheaper than a function call just to ask.
+     */
+    suspend fun todaysSpin(uid: String): SpinOutcome? {
+        val snap = db.collection(Collections.DAILY_SPINS)
+            .document("${uid}_${londonDayKey()}")
+            .get().await()
+        if (!snap.exists()) return null
+        return SpinOutcome(
+            alreadySpun = true,
+            pence = (snap.get("pence") as? Number)?.toInt() ?: 0,
+            label = snap.getString("label") ?: "",
+        )
+    }
+
+    /** Spins, or reports that today's spin has already gone. */
+    suspend fun spinDailyWheel(): SpinOutcome {
+        val result = functions.getHttpsCallable(Functions.SPIN_DAILY_WHEEL).call().await()
+        val data = result.getData() as? Map<*, *> ?: emptyMap<String, Any>()
+        return SpinOutcome(
+            alreadySpun = data["alreadySpun"] == true,
+            pence = (data["pence"] as? Number)?.toInt() ?: 0,
+            label = data["label"] as? String ?: "",
+        )
+    }
+
+    /** The day rolls over at UK midnight, which is what the server uses too. */
+    private fun londonDayKey(): String =
+        java.time.LocalDate.now(java.time.ZoneId.of("Europe/London")).toString()
 
     // ---- Admin -------------------------------------------------------
 

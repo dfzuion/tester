@@ -25,6 +25,7 @@ object Routes {
     const val SUPPORT = "support"
     const val FAQ = "faq"
     const val CREDIT = "account/credit"
+    const val SPIN = "spin"
     const val ADMIN = "admin"
     const val ADMIN_USERS = "admin/users"
     const val ADMIN_COUPONS = "admin/coupons"

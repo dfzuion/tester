@@ -77,6 +77,18 @@ service cloud.firestore {
     match /mail/{id}     { allow read, write: if false; }
 
     /**
+     * The document id is the uid and the London date, so a customer can check
+     * whether they have used today's spin without calling a function - and a
+     * missing document is the answer, which a resource.data rule could not
+     * express. Only spinDailyWheel writes here.
+     */
+    match /dailySpins/{id} {
+      allow get: if signedIn() && id.matches(request.auth.uid + '_.*');
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    /**
      * Unclaimed prizes are invisible to every client - knowing which numbers
      * are loaded would break the game. A won prize is readable by the person
      * who won it, and by anyone for the public "recent wins" feed.
