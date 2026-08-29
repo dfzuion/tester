@@ -1687,8 +1687,13 @@ private fun DrawScope.drawFish(
     // wave with a wake trailing off it; beaten and rolling on the top it is a
     // boil, flat with nothing under it. They look different because they are,
     // and it is how you read a fight.
+    // Centred on the middle of the fish rather than its nose - the water is
+    // pushed by the whole animal, and rings hanging off its head looked like
+    // they belonged to something else.
+    val midX = x + length * 0.45f
+
     if (running) {
-        drawWake(x, surface, length, t, 1f - under * 0.5f)
+        drawWake(midX, surface, length, t, 1f - under * 0.5f)
     }
 
     if (under < 0.55f) {
@@ -1699,7 +1704,7 @@ private fun DrawScope.drawFish(
 
             drawOval(
                 Color(0xFFD6E2C0).copy(alpha = boil * 0.55f),
-                Offset(x - r, surface - r * 0.26f),
+                Offset(midX - r, surface - r * 0.26f),
                 Size(r * 2, r * 0.52f),
                 style = Stroke(width = 1.5f),
             )
@@ -1714,7 +1719,7 @@ private fun DrawScope.drawFish(
                 drawCircle(
                     Color(0xFFE8F0DC).copy(alpha = (boil - 0.6f) * 0.9f),
                     1.5f,
-                    Offset(x + cos(a) * r, surface - abs(sin(a)) * r * 0.5f),
+                    Offset(midX + cos(a) * r, surface - abs(sin(a)) * r * 0.5f),
                 )
             }
         }
@@ -1733,7 +1738,7 @@ private fun DrawScope.drawFish(
         clipRect(top = surface) {
             drawRect(
                 Color(0xFF1C2E20).copy(alpha = 0.16f + under * 0.20f),
-                Offset(x - length, surface),
+                Offset(midX - length, surface),
                 Size(length * 2.2f, length),
             )
         }
@@ -1757,7 +1762,7 @@ private fun DrawScope.drawWake(x: Float, surface: Float, length: Float, t: Float
     val bulge = length * 0.34f
 
     drawArc(
-        Color(0xFFCEDEBA).copy(alpha = 0.30f * strength),
+        Color(0xFFCEDEBA).copy(alpha = 0.42f * strength),
         180f,
         180f,
         false,
@@ -1770,7 +1775,7 @@ private fun DrawScope.drawWake(x: Float, surface: Float, length: Float, t: Float
         val age = (t * 0.9f + i * 0.25f) % 1f
         val back = length * (0.2f + age * 1.5f)
         val open = length * (0.06f + age * 0.55f)
-        val colour = Color(0xFFCEDEBA).copy(alpha = 0.26f * strength * (1f - age))
+        val colour = Color(0xFFCEDEBA).copy(alpha = 0.34f * strength * (1f - age))
         val from = Offset(x + length * 0.10f, surface)
 
         drawLine(colour, from, Offset(from.x + back, surface - open * 0.34f), 1.4f)
