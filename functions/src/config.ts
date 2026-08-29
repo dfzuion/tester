@@ -20,8 +20,15 @@ export const FROM_EMAIL = defineString("FROM_EMAIL", { default: "no-reply@rodrun
  * instant win, anything needing attention - is copied here as well, so the
  * record does not depend on which administrator happened to be listed at the
  * time or on anyone remembering to check the app.
+ *
+ * A plain constant, deliberately, not a defineString parameter. Adding a new
+ * parameter makes the CLI want a value for it at deploy time, and in
+ * non-interactive mode that fails the whole deploy listing every parameter it
+ * would otherwise have asked about. This is not a secret and it changes about
+ * never, so an environment variable with a sensible fallback is the right
+ * shape for it.
  */
-export const BUSINESS_EMAIL = defineString("BUSINESS_EMAIL", { default: "info@rodrunners.co.uk" });
+export const BUSINESS_EMAIL = process.env.BUSINESS_EMAIL || "info@rodrunners.co.uk";
 export const REGION = "europe-west2"; // London
 
 /** What a referral pays once the referred customer's first order is paid. */

@@ -235,7 +235,7 @@ export async function notifyAdmins(
     // And the business inbox, so there is one place every win lands whoever
     // happens to be an administrator that week. Skipped if an administrator
     // already holds that address, rather than sending the same mail twice.
-    const business = BUSINESS_EMAIL.value().trim().toLowerCase();
+    const business = BUSINESS_EMAIL.trim().toLowerCase();
     if (business && !told.has(business)) {
       await queueEmail(business, "admin_alert", { title, body });
     }
@@ -423,7 +423,7 @@ export const listMailQueue = onCall(
       };
     });
 
-    return { counts, messages, from: FROM_EMAIL.value(), business: BUSINESS_EMAIL.value() };
+    return { counts, messages, from: FROM_EMAIL.value(), business: BUSINESS_EMAIL };
   }
 );
 
