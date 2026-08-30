@@ -42,7 +42,7 @@ import { writeAudit } from "./audit";
  * It will happen to roughly one angler in a thousand casts, which is about
  * right for a fish that makes the papers when it comes out for real.
  */
-const SPECIES_RANGE: Record<string, { min: number; max: number }> = {
+export const SPECIES_RANGE: Record<string, { min: number; max: number }> = {
   "Roach": { min: 0.2, max: 4 },
   "Tench": { min: 1, max: 13 },
   "Bream": { min: 1.5, max: 19 },
