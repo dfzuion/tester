@@ -1130,7 +1130,19 @@ private fun DrawScope.drawScene(
     }
 
     if (phase == Phase.Hooked) {
-        meter(34f, h - 74f, w - 68f, 15f, tension.coerceAtMost(1f), RrrColors.Danger)
+        // The tension bar had no marks on it, so the only way to learn where
+        // the ends were was to lose a fish at each of them. The two danger
+        // zones are drawn on now - slack at the bottom, breaking at the top -
+        // and the bar turns as it enters one, because at the moment you need
+        // to react you are watching the fish, not reading a label.
+        val danger = tension >= 1f || tension <= 0.16f
+
+        meter(
+            34f, h - 74f, w - 68f, 15f,
+            tension.coerceAtMost(1f),
+            if (danger) RrrColors.Danger else Color(0xFF8B9A5E),
+            listOf(0f..0.16f, 0.92f..1f),
+        )
         meter(34f, h - 40f, w - 68f, 15f, reeled, RrrColors.Khaki)
     }
 }
@@ -1955,8 +1967,19 @@ private fun DrawScope.meter(
     height: Float,
     value: Float,
     colour: Color,
+    zones: List<ClosedFloatingPointRange<Float>> = emptyList(),
 ) {
     drawRect(Color(0xB8060906), Offset(x, y), Size(width, height))
+
+    // Bands where the fish comes off, under the fill so a bar sitting in one
+    // still reads as a bar rather than as stripes.
+    zones.forEach { zone ->
+        val zx = x + width * zone.start
+        val zw = maxOf(2f, width * (zone.endInclusive - zone.start))
+
+        drawRect(Color(0xFFDE6152).copy(alpha = 0.30f), Offset(zx, y), Size(zw, height))
+    }
+
     drawRect(colour, Offset(x, y), Size(width * value.coerceIn(0f, 1f), height))
     drawRect(Color(0x47E2E8D0), Offset(x, y), Size(width, height), style = Stroke(width = 1f))
 }
