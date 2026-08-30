@@ -38,6 +38,8 @@ data class AdminSupportState(
 ) {
     val canSend: Boolean get() = openTicket != null && reply.trim().length >= 2 && !busy
     val waiting: Int get() = tickets.count { it.status == "open" }
+    val shown: List<SupportTicket>
+        get() = if (filter == null) tickets else tickets.filter { it.status == filter }
 }
 
 @HiltViewModel
@@ -52,18 +54,21 @@ class AdminSupportViewModel @Inject constructor(
     private var listJob: Job? = null
     private var threadJob: Job? = null
 
-    init { watch("open") }
+    init { watch() }
 
-    fun watch(status: String?) {
+    /** One listener over everything; the filter is applied where it is shown. */
+    fun watch() {
         listJob?.cancel()
-        _state.update { it.copy(filter = status, loading = true, error = null) }
+        _state.update { it.copy(loading = true, error = null) }
 
         listJob = viewModelScope.launch {
-            support.allTickets(status)
+            support.allTickets()
                 .catch { e -> _state.update { it.copy(loading = false, error = Errors.from(e)) } }
                 .collect { rows -> _state.update { it.copy(tickets = rows, loading = false) } }
         }
     }
+
+    fun filter(status: String?) = _state.update { it.copy(filter = status) }
 
     fun open(ticket: SupportTicket) {
         threadJob?.cancel()

@@ -138,12 +138,12 @@ private fun TicketList(
                 Chip(
                     text = label,
                     selected = state.filter == key,
-                    onClick = { viewModel.watch(key) },
+                    onClick = { viewModel.filter(key) },
                 )
             }
         }
 
-        if (!state.loading && state.tickets.isEmpty()) {
+        if (!state.loading && state.shown.isEmpty()) {
             Text(
                 "Nothing here.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -156,7 +156,7 @@ private fun TicketList(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            items(state.tickets, key = { it.id }) { ticket ->
+            items(state.shown, key = { it.id }) { ticket ->
                 TicketRow(ticket) { viewModel.open(ticket) }
             }
 

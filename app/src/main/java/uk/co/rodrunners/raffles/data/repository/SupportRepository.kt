@@ -67,14 +67,16 @@ class SupportRepository @Inject constructor(
      * Live rather than fetched, so a reply sent from the website appears here
      * without anyone reloading anything.
      */
-    fun allTickets(status: String?): Flow<List<SupportTicket>> = callbackFlow {
-        var query: Query = db.collection(Collections.SUPPORT_TICKETS)
-
-        if (status != null) {
-            query = query.whereEqualTo("status", status)
-        }
-
-        val reg = query
+    fun allTickets(): Flow<List<SupportTicket>> = callbackFlow {
+        // Everything, sorted, and filtered where it is shown.
+        //
+        // Filtering by status in the query needs a composite index on
+        // (status, lastMessageAt), and until that index exists Firestore
+        // refuses the whole query - so the screen shows an empty inbox with
+        // real tickets sitting in it. Sixty rows is nothing to sift through in
+        // the client, and this way it works the moment it ships rather than
+        // whenever someone remembers to deploy the indexes as well.
+        val reg = db.collection(Collections.SUPPORT_TICKETS)
             .orderBy("lastMessageAt", Query.Direction.DESCENDING)
             .limit(60)
             .addSnapshotListener { snap, err ->
