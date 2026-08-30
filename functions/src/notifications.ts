@@ -42,9 +42,17 @@ export async function pushToUser(
 
   const res = await admin.messaging().sendEachForMulticast({
     tokens,
-    notification: { title, body },
-    data: { category, ...data },
-    android: { priority: "high", notification: { channelId: channelFor(category), color: "#C6A15B" } },
+    // Data only, deliberately. With a notification block, Android draws the
+    // message itself whenever the app is in the background, using its own
+    // defaults - so the same alert looked one way with the app open and
+    // another with it closed, and the deep link the app builds never ran,
+    // because the tap went to the launcher instead of the raffle.
+    //
+    // Data only means onMessageReceived always runs, the app is the only
+    // thing that ever draws a notification, and every one of them looks the
+    // same and opens the right screen.
+    data: { category, title, body, ...data },
+    android: { priority: "high" },
   });
 
   // Prune tokens the device no longer honours.
@@ -63,21 +71,12 @@ export async function pushToUser(
 export async function pushToTopic(topic: string, title: string, body: string, data: Record<string, string> = {}) {
   await admin.messaging().send({
     topic,
-    notification: { title, body },
-    data,
-    android: { priority: "normal", notification: { channelId: "rrr_general", color: "#C6A15B" } },
+    // Data only, for the same reason as above.
+    data: { category: "general", title, body, ...data },
+    android: { priority: "normal" },
   });
 }
 
-function channelFor(category: string): string {
-  switch (category) {
-    case "win": return "rrr_wins";
-    case "purchase": case "payment": case "refund": return "rrr_orders";
-    case "ending_soon": case "new_competition": return "rrr_raffles";
-    case "promotion": return "rrr_promotions";
-    default: return "rrr_general";
-  }
-}
 
 /** Renders a Firestore-stored template and queues it for delivery. */
 

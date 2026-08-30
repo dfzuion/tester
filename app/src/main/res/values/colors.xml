@@ -1,6 +1,14 @@
 <resources>
-    <color name="brand_gold">#A96A2C</color>
-    <color name="brand_khaki">#8FA84E</color>
+    <!--
+        The notification accent. Android tints the small icon and the app name
+        line with it, so it is the one place the brand colour shows up outside
+        the app entirely.
+
+        It was #A96A2C, which is bronze, and the server was sending #C6A15B,
+        which is gold. Scott asked for neither anywhere, and both were sitting
+        on the lock screen of every customer's phone.
+    -->
+    <color name="brand_accent">#51513F</color>
     <color name="brand_ink">#090B07</color>
     <color name="brand_surface">#14180F</color>
 </resources>

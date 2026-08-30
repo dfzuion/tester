@@ -55,7 +55,7 @@ class RrrMessagingService : FirebaseMessagingService() {
 
         val notification = NotificationCompat.Builder(this, channelFor(category))
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(getColor(R.color.brand_gold))
+            .setColor(getColor(R.color.brand_accent))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

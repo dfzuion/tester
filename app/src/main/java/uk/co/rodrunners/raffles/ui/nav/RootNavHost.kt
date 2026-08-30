@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -68,15 +69,38 @@ fun RootNavHost(
 ) {
     val signedIn = authState is AuthState.SignedIn
 
+    /**
+     * Back to the welcome screen with nothing behind it.
+     *
+     * This used to pop `graph.id` inclusively, which takes out the graph's own
+     * root along with everything in it. With the root gone the host has
+     * nowhere to put the destination it was asked for, and Android does the
+     * only thing left to it: it finishes the activity. Logging out closed the
+     * app.
+     *
+     * Popping to the start destination inclusively empties the stack without
+     * removing the thing that holds it, which is the difference. singleTop
+     * because two callers can ask for this at once - the account screen when
+     * the button is pressed, and the effect below when auth state changes -
+     * and two welcome screens on the stack means one back press lands on
+     * another one.
+     */
+    fun resetTo(route: String) {
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
+    fun toWelcome() = resetTo(Routes.WELCOME)
+
     // A sign-out anywhere in the app returns the customer to the welcome screen
     // rather than leaving a signed-in screen on display.
     LaunchedEffect(signedIn) {
         if (!signedIn) {
             val current = navController.currentBackStackEntry?.destination?.route
             if (current != null && current in privateRoutes) {
-                navController.navigate(Routes.WELCOME) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                }
+                toWelcome()
             }
         }
     }
@@ -145,16 +169,8 @@ fun RootNavHost(
         composable(Routes.VERIFY_EMAIL) {
             VerifyEmailScreen(
                 email = (authState as? AuthState.SignedIn)?.email.orEmpty(),
-                onVerified = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                },
-                onSignOut = {
-                    navController.navigate(Routes.WELCOME) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                },
+                onVerified = { resetTo(Routes.HOME) },
+                onSignOut = { toWelcome() },
             )
         }
 
@@ -202,11 +218,7 @@ fun RootNavHost(
                 onOpenFaq = { navController.navigate(Routes.FAQ) },
                 onOpenLegal = { navController.navigate(Routes.legal(it)) },
                 onOpenAdmin = { navController.navigate(Routes.ADMIN) },
-                onSignedOut = {
-                    navController.navigate(Routes.WELCOME) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                },
+                onSignedOut = { toWelcome() },
                 onSignIn = { navController.navigate(Routes.LOGIN) },
             )
         }
@@ -294,11 +306,7 @@ fun RootNavHost(
         composable(Routes.SECURITY) {
             SecurityScreen(
                 onBack = { navController.popBackStack() },
-                onAccountDeleted = {
-                    navController.navigate(Routes.WELCOME) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                },
+                onAccountDeleted = { toWelcome() },
             )
         }
         composable(Routes.NOTIFICATIONS) {

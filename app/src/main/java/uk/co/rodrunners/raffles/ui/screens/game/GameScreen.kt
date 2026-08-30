@@ -181,7 +181,7 @@ private val BAITS = listOf(
             "Roach" to 34, "Tench" to 18, "Bream" to 24,
             "Leather carp" to 2, "Common carp" to 16, "Mirror carp" to 6,
         ),
-        2.0f, 6.0f, 0.18f,
+        1.4f, 3.8f, 0.10f,
     ),
     Bait(
         "worm", "Lobworm", "Lively on the hook",
@@ -189,7 +189,7 @@ private val BAITS = listOf(
             "Roach" to 22, "Tench" to 30, "Bream" to 26,
             "Leather carp" to 2, "Common carp" to 14, "Mirror carp" to 6,
         ),
-        2.2f, 6.5f, 0.20f,
+        1.6f, 4.2f, 0.11f,
     ),
     Bait(
         "boilie", "Boilie", "Rolled, boiled, hard",
@@ -197,7 +197,7 @@ private val BAITS = listOf(
             "Roach" to 2, "Tench" to 8, "Bream" to 6,
             "Leather carp" to 14, "Common carp" to 38, "Mirror carp" to 32,
         ),
-        3.5f, 11f, 0.30f,
+        2.2f, 6.0f, 0.15f,
     ),
 )
 
@@ -513,8 +513,8 @@ fun GameScreen(
                 hidden.overFor = 0f
                 hidden.slackFor = 0f
 
-                hidden.liners = if (Random.nextFloat() < 0.55f) {
-                    List(1 + Random.nextInt(2)) {
+                hidden.liners = if (Random.nextFloat() < 0.38f) {
+                    List(1) {
                         0.5f + Random.nextFloat() * maxOf(0.4f, wait - 0.3f)
                     }.sorted()
                 } else {
@@ -529,10 +529,10 @@ fun GameScreen(
                     hidden.blankAt = chosen.latest + 1.8f
                 } else {
                     hidden.biteAt = wait
-                    // A take is a moment, not the second and a bit this used
-                    // to allow. A confident fish gives a little longer than a
-                    // fussy one.
-                    hidden.biteEnds = wait + 0.26f + species.fight * 0.18f
+                    // A take is a moment, but a moment a person can actually
+                    // act on. The first pass sat at about a third of a second,
+                    // which is most of a reaction time on its own.
+                    hidden.biteEnds = wait + 0.62f + species.fight * 0.22f
                     hidden.blankAt = Float.MAX_VALUE
                 }
 
@@ -654,7 +654,8 @@ fun GameScreen(
                     power = power,
                     tension = tension,
                     reeled = reeled,
-                    taking = hidden.taking || hidden.dipping,
+                    taking = hidden.taking,
+                    knocking = hidden.dipping && !hidden.taking,
                     weight = hidden.weight,
                     running = hidden.running,
                     clock = swim,
@@ -1093,6 +1094,7 @@ private fun DrawScope.drawScene(
     tension: Float,
     reeled: Float,
     taking: Boolean,
+    knocking: Boolean,
     weight: Float,
     running: Boolean,
     clock: Float,
@@ -1118,7 +1120,7 @@ private fun DrawScope.drawScene(
     drawRodAndLine(phase, tension, w, h, mouth?.x ?: floatX, mouth?.y ?: floatY, clock)
 
     if (mouth == null) {
-        drawFloat(phase, floatX, floatY, distance, taking, clock)
+        drawFloat(phase, floatX, floatY, distance, taking, knocking, clock)
     }
 
     drawReeds(w, h, horizon, clock)
@@ -1878,24 +1880,35 @@ private fun DrawScope.drawFloat(
     y: Float,
     distance: Float,
     taking: Boolean,
+    knocking: Boolean,
     t: Float,
 ) {
     if (phase == Phase.Ready || phase == Phase.Power) {
         return
     }
 
+    // A take buries the float. A liner knocks it - a sharp half dip and back
+    // up. Making these look identical turned every bite into a coin flip
+    // nobody could learn, which is not difficulty, it is a tax. Told apart,
+    // reading the float becomes the skill the game is actually about.
     val scale = 1.0f + distance * 1.1f
-    val dip = if (taking) 10f * scale else sin(t * 1.6f) * 1.4f
+    val dip = when {
+        taking -> 10f * scale
+        knocking -> 3.4f * scale
+        else -> sin(t * 1.6f) * 1.4f
+    }
     val cy = y + dip
-    val rings = if (taking) 4 else 2
+    val rings = if (taking) 4 else if (knocking) 3 else 2
 
     for (i in 0 until rings) {
-        val age = (t * (if (taking) 1.6f else 0.5f) + i.toFloat() / rings) % 1f
+        val speed = if (taking) 1.6f else if (knocking) 1.1f else 0.5f
+        val age = (t * speed + i.toFloat() / rings) % 1f
         val rx = (8f + age * 46f) * scale
         val ry = (2.6f + age * 15f) * scale
+        val strength = if (taking) 0.5f else if (knocking) 0.32f else 0.22f
 
         drawOval(
-            Color(0xFFCEDEB2).copy(alpha = (if (taking) 0.5f else 0.22f) * (1f - age)),
+            Color(0xFFCEDEB2).copy(alpha = strength * (1f - age)),
             Offset(x - rx, cy + 3f * scale - ry),
             Size(rx * 2, ry * 2),
             style = Stroke(width = 1.2f),
