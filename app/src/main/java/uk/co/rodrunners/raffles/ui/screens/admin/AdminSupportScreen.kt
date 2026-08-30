@@ -97,7 +97,7 @@ fun AdminSupportScreen(
         if (open == null) {
             TicketList(state, padding, viewModel)
         } else {
-            Thread(state, open, padding, viewModel)
+            TicketThread(state, open, padding, viewModel)
         }
     }
 }
@@ -152,7 +152,10 @@ private fun TicketList(
             )
         }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             items(state.tickets, key = { it.id }) { ticket ->
                 TicketRow(ticket) { viewModel.open(ticket) }
             }
@@ -207,7 +210,7 @@ private fun TicketRow(ticket: SupportTicket, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Thread(
+private fun TicketThread(
     state: AdminSupportState,
     ticket: SupportTicket,
     padding: PaddingValues,
