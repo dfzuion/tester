@@ -66,6 +66,10 @@ data class SupportTicket(
     @DocumentId val id: String = "",
     val ticketId: String = "",
     val userId: String = "",
+    // Written by createSupportTicket and never read until there was an admin
+    // screen that needed to say who had written in.
+    val userEmail: String? = null,
+    val userDisplayName: String = "Angler",
     val category: String = "other",
     val subject: String = "",
     val orderId: String? = null,

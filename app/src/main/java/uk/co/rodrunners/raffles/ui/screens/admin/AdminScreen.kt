@@ -64,6 +64,7 @@ fun AdminScreen(
     onOpenInstantWins: (String) -> Unit = {},
     onOpenAdminUsers: () -> Unit = {},
     onOpenCoupons: () -> Unit = {},
+    onOpenSupport: () -> Unit = {},
     viewModel: AdminViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -124,6 +125,7 @@ fun AdminScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuietButton("Administrators", onClick = onOpenAdminUsers)
                     QuietButton("Credit and coupons", onClick = onOpenCoupons)
+                    QuietButton("Support inbox", onClick = onOpenSupport)
                 }
             }
 

@@ -24,6 +24,7 @@ import uk.co.rodrunners.raffles.ui.screens.account.PaymentMethodsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.PersonalDetailsScreen
 import uk.co.rodrunners.raffles.ui.screens.account.SecurityScreen
 import uk.co.rodrunners.raffles.ui.screens.admin.AdminScreen
+import uk.co.rodrunners.raffles.ui.screens.admin.AdminSupportScreen
 import uk.co.rodrunners.raffles.ui.screens.credit.CreditScreen
 import uk.co.rodrunners.raffles.ui.screens.game.GameScreen
 import uk.co.rodrunners.raffles.ui.screens.spin.SpinScreen
@@ -359,6 +360,7 @@ fun RootNavHost(
                 onOpenInstantWins = { navController.navigate(Routes.adminInstantWins(it)) },
                 onOpenAdminUsers = { navController.navigate(Routes.ADMIN_USERS) },
                 onOpenCoupons = { navController.navigate(Routes.ADMIN_COUPONS) },
+                onOpenSupport = { navController.navigate(Routes.ADMIN_SUPPORT) },
             )
         }
 
@@ -375,6 +377,10 @@ fun RootNavHost(
 
         composable(Routes.GAME) {
             GameScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.ADMIN_SUPPORT) {
+            AdminSupportScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.ADMIN_COUPONS) {
@@ -423,6 +429,9 @@ private val privateRoutes = setOf(
     Routes.PAYMENT_METHODS,
     Routes.CHECKOUT,
     Routes.ADMIN,
+    Routes.ADMIN_SUPPORT,
+    Routes.ADMIN_USERS,
+    Routes.ADMIN_COUPONS,
     Routes.SUPPORT,
     Routes.TICKET_THREAD,
 )

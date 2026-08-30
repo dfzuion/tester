@@ -57,8 +57,40 @@ class SupportRepository @Inject constructor(
         return (result.getData() as Map<*, *>)["ticketId"] as String
     }
 
-    suspend fun reply(ticketDocId: String, message: String) {
-        functions.getHttpsCallable(Functions.REPLY_TICKET)
-            .call(mapOf("ticketDocId" to ticketDocId, "message" to message)).await()
+    /**
+     * Every ticket, for an administrator.
+     *
+     * The rules have always allowed this. Nothing ever asked, so customers
+     * wrote in and their messages sat in Firestore with no screen anywhere
+     * that showed them.
+     *
+     * Live rather than fetched, so a reply sent from the website appears here
+     * without anyone reloading anything.
+     */
+    fun allTickets(status: String?): Flow<List<SupportTicket>> = callbackFlow {
+        var query: Query = db.collection(Collections.SUPPORT_TICKETS)
+
+        if (status != null) {
+            query = query.whereEqualTo("status", status)
+        }
+
+        val reg = query
+            .orderBy("lastMessageAt", Query.Direction.DESCENDING)
+            .limit(60)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { close(err); return@addSnapshotListener }
+                trySend(snap?.toObjects(SupportTicket::class.java) ?: emptyList())
+            }
+        awaitClose { reg.remove() }
+    }
+
+    suspend fun reply(ticketDocId: String, message: String, closeTicket: Boolean = false) {
+        functions.getHttpsCallable(Functions.REPLY_TICKET).call(
+            mapOf(
+                "ticketDocId" to ticketDocId,
+                "message" to message,
+                "closeTicket" to closeTicket,
+            )
+        ).await()
     }
 }
