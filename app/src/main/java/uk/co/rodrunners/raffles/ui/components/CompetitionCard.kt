@@ -169,13 +169,25 @@ fun FeaturedCompetitionCard(
         )
         Box(Modifier.fillMaxSize().background(RrrColors.ScrimBottom))
 
+        // Two lit tags: the LIVE lamp, and how long is left. Inside three days
+        // the countdown flashes, which is the only thing on a card allowed to
+        // move on its own.
         Row(
             Modifier.align(Alignment.TopStart).padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StatusPill(if (competition.isSoldOut) "sold_out" else "live")
-            Spacer(Modifier.width(8.dp))
-            if (competition.isDemo) StatusPill("demo")
+            if (competition.isSoldOut) {
+                StatusPill("sold_out")
+            } else {
+                LivePill()
+                Spacer(Modifier.width(8.dp))
+                CountdownPill(competition.closesAtMillis)
+            }
+
+            if (competition.isDemo) {
+                Spacer(Modifier.width(8.dp))
+                StatusPill("demo")
+            }
         }
 
         Column(

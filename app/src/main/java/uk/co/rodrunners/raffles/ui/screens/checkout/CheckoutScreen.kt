@@ -61,6 +61,8 @@ import uk.co.rodrunners.raffles.ui.components.QuietButton
 import uk.co.rodrunners.raffles.ui.screens.auth.ConsentRow
 import uk.co.rodrunners.raffles.ui.screens.auth.RrrTextField
 import uk.co.rodrunners.raffles.ui.theme.Dimens
+import uk.co.rodrunners.raffles.ui.components.InstantWinCelebration
+import uk.co.rodrunners.raffles.ui.components.WonPrize
 import uk.co.rodrunners.raffles.ui.theme.RrrColors
 import uk.co.rodrunners.raffles.ui.theme.RrrShapes
 import uk.co.rodrunners.raffles.ui.theme.RrrType
@@ -102,6 +104,14 @@ fun CheckoutScreen(
             )
         }
     }
+
+    /*
+     * Instant wins get the whole screen: confetti over everything and the
+     * prizes named. Shown once, keyed on the order, so backing out of the
+     * confirmation and returning does not set it off again.
+     */
+    val won = (state.phase as? PaymentPhase.Confirmed)?.order?.takeIf { it.hasInstantWins }
+    var celebrated by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -156,6 +166,19 @@ fun CheckoutScreen(
 
             CheckoutFooter(state, viewModel, onClose)
         }
+    }
+
+    if (won != null && celebrated != won.id) {
+        InstantWinCelebration(
+            prizes = won.instantWins.map {
+                WonPrize(
+                    prizeName = it.prizeName,
+                    entryNumber = it.entryNumber,
+                    valuePence = it.valuePence.toLong(),
+                )
+            },
+            onDismiss = { celebrated = won.id },
+        )
     }
 }
 

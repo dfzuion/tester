@@ -63,7 +63,8 @@ object Dimens {
     val gutter = 20.dp
     val cardGap = 12.dp
     val sectionGap = 28.dp
-    val minTouchTarget = 48.dp
+    /** Raised with the type. Buttons on a phone held outdoors want the room. */
+    val minTouchTarget = 54.dp
     val cardRadius = 14.dp
 }
 

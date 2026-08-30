@@ -43,7 +43,7 @@ fun GoldButton(
         onClick = onClick,
         // Primary actions get real height and a shadow. Flat, short buttons on
         // a flat background were most of what made the app feel cheap.
-        modifier = modifier.defaultMinSize(minHeight = 52.dp),
+        modifier = modifier.defaultMinSize(minHeight = 60.dp),
         enabled = enabled && !loading,
         shape = RrrShapes.medium,
         elevation = ButtonDefaults.buttonElevation(

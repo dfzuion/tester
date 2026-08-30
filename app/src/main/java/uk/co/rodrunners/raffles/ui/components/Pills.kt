@@ -1,11 +1,22 @@
 package uk.co.rodrunners.raffles.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -14,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -110,5 +122,101 @@ fun DemoDataBanner(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall,
             color = RrrColors.Warning,
         )
+    }
+}
+
+/**
+ * The lit LIVE marker. Same shape as StatusPill but with a lamp on it that
+ * breathes, because a raffle that is open right now should look like it is
+ * open right now and not like a label somebody printed.
+ */
+@Composable
+fun LivePill(modifier: Modifier = Modifier) {
+    val pulse = rememberInfiniteTransition(label = "livePulse")
+    val lamp by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(950, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "lamp",
+    )
+
+    Row(
+        modifier
+            .background(RrrColors.Ink.copy(alpha = 0.82f), RoundedCornerShape(999.dp))
+            .border(BorderStroke(1.dp, RrrColors.KhakiBright.copy(alpha = 0.75f)), RoundedCornerShape(999.dp))
+            .padding(horizontal = 11.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Canvas(Modifier.size(7.dp)) {
+            drawCircle(color = RrrColors.Success.copy(alpha = lamp * 0.35f), radius = size.minDimension * 0.62f)
+            drawCircle(color = RrrColors.Success.copy(alpha = lamp), radius = size.minDimension * 0.32f)
+        }
+
+        Spacer(Modifier.width(7.dp))
+
+        Text("LIVE", style = RrrType.Eyebrow, color = RrrColors.Bone)
+    }
+}
+
+/**
+ * How long is left, next to the LIVE lamp. Days until we are inside the last
+ * day, then hours, then minutes — "1 day left" for the final four hours is the
+ * sort of thing people complain about afterwards.
+ *
+ * Inside three days it flashes. That is the only thing on a card allowed to
+ * move on its own, so it has to earn it.
+ */
+@Composable
+fun CountdownPill(closesAtMillis: Long?, modifier: Modifier = Modifier) {
+    if (closesAtMillis == null || closesAtMillis <= 0L) return
+
+    val left = closesAtMillis - System.currentTimeMillis()
+    val hours = left / 3_600_000L
+
+    val label = when {
+        left <= 0L -> "CLOSED"
+        hours < 1L -> "MINUTES LEFT"
+        hours < 24L -> if (hours == 1L) "1 HOUR LEFT" else "$hours HOURS LEFT"
+        else -> {
+            val days = ((left + 86_399_999L) / 86_400_000L)
+            if (days == 1L) "1 DAY LEFT" else "$days DAYS LEFT"
+        }
+    }
+
+    val hurrying = left in 1..(3L * 86_400_000L)
+
+    val flash = rememberInfiniteTransition(label = "countdownFlash")
+    val on by flash.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "flash",
+    )
+
+    // A hard alternation rather than a fade. A warning light blinks; it does
+    // not breathe.
+    val lit = hurrying && on < 0.5f
+
+    val edge = if (hurrying) RrrColors.Warning else RrrColors.Khaki
+    val fill = if (lit) RrrColors.Warning else RrrColors.Ink.copy(alpha = 0.82f)
+    val ink = when {
+        lit -> RrrColors.Ink
+        hurrying -> RrrColors.Warning
+        else -> RrrColors.KhakiBright
+    }
+
+    Box(
+        modifier
+            .background(fill, RoundedCornerShape(999.dp))
+            .border(BorderStroke(1.dp, edge), RoundedCornerShape(999.dp))
+            .padding(horizontal = 11.dp, vertical = 5.dp)
+    ) {
+        Text(label, style = RrrType.Eyebrow, color = ink)
     }
 }
