@@ -1892,8 +1892,11 @@ private fun DrawScope.drawFloat(
     // nobody could learn, which is not difficulty, it is a tax. Told apart,
     // reading the float becomes the skill the game is actually about.
     val scale = 1.0f + distance * 1.1f
+    // A take pulls it right under. That is the signal the whole game turns
+    // on, and at this size a ten pixel nudge was easy to miss entirely -
+    // which is half of why the thing felt like guesswork.
     val dip = when {
-        taking -> 10f * scale
+        taking -> 17f * scale
         knocking -> 3.4f * scale
         else -> sin(t * 1.6f) * 1.4f
     }
@@ -1921,8 +1924,11 @@ private fun DrawScope.drawFloat(
         Offset(x - 2.6f * scale, cy + 2f * scale - 7f * scale),
         Size(5.2f * scale, 14f * scale),
     )
+    // Under the water the tip loses its light, the way it does when a fish
+    // has it. Bright and clear sitting; dragged down and drowned when
+    // something has taken it.
     drawRect(
-        if (taking) Color(0xFFE9A25E) else Color(0xFF9B9B7E),
+        if (taking) Color(0xFF7E6B45) else Color(0xFFB9BE9A),
         Offset(x - 1.5f * scale, cy - 14f * scale),
         Size(3f * scale, 13f * scale),
     )
@@ -1931,6 +1937,15 @@ private fun DrawScope.drawFloat(
         Offset(x - 1.5f * scale, cy - 6f * scale),
         Size(3f * scale, 2.4f * scale),
     )
+
+    if (taking) {
+        // The surface closing over the top of it.
+        drawRect(
+            Color(0xFF1A2A1E).copy(alpha = 0.55f),
+            Offset(x - 4f * scale, cy - 13f * scale),
+            Size(8f * scale, 26f * scale),
+        )
+    }
 }
 
 private fun DrawScope.meter(
