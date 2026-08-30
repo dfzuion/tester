@@ -260,6 +260,35 @@ private fun weigh(species: Species, power: Float): Float {
  * great deal deeper, and depth is what the eye reads as size. Both come off
  * the same number, so a fifty cannot be drawn as a long thin thing.
  */
+/**
+ * What to say about the fish that has just come in.
+ *
+ * The same flat "tap to cast again" for a half pound roach and for a forty is
+ * why the good ones did not feel like anything. Anglers have words for the
+ * sizes that matter and they are not complicated ones. Same lines as the site.
+ */
+private fun landedLine(species: Species, weight: Float, record: Boolean): String {
+    val carp = species.name.contains("carp")
+
+    val milestone = when {
+        carp && weight >= 50f -> "A fifty. Most anglers never see one."
+        carp && weight >= 40f -> "Forty. Get the camera."
+        carp && weight >= 30f -> "A thirty. Proper fish."
+        carp && weight >= 20f -> "A twenty. Good one."
+        species.name == "Tench" && weight >= 8f -> "A big tench. They do not come much better."
+        species.name == "Bream" && weight >= 12f -> "A double figure bream. Rare thing."
+        species.name == "Roach" && weight >= 2f -> "Two pound roach. That is a specimen."
+        else -> null
+    }
+
+    return when {
+        milestone != null && record -> "$milestone And your best yet."
+        milestone != null -> milestone
+        record -> "Your best yet."
+        else -> "Tap to cast again."
+    }
+}
+
 private data class Build(val length: Float, val depth: Float)
 
 private fun proportions(species: Species, weight: Float): Build {
@@ -475,11 +504,8 @@ fun GameScreen(
                         hidden.running = false
                         hidden.pulling = false
                         phase = Phase.Landed
-                        message = if (record) {
-                            "${species.name}, ${formatWeight(weight)}. Your best yet."
-                        } else {
-                            "${species.name}, ${formatWeight(weight)}. Tap to cast again."
-                        }
+                        message = "${species.name}, ${formatWeight(weight)}. " +
+                            landedLine(species, weight, record)
                     }
                 }
 
