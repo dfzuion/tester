@@ -1103,6 +1103,13 @@ private fun DrawScope.drawScene(
     val h = size.height
     val horizon = h * 0.34f
 
+    // A DrawScope works in physical pixels, not dp. On a three times density
+    // phone every "15px" bar arrives five dp tall and the float ends up about
+    // one dp across - which is not a small float, it is no float, and it is
+    // the thing the game asks you to watch. Anything that has to stay legible
+    // regardless of the screen is multiplied by this.
+    val ui = density.coerceIn(1f, 3f)
+
     drawSky(w, h, horizon)
     drawTreeline(w, horizon)
     drawWater(w, h, horizon, clock)
@@ -1120,13 +1127,22 @@ private fun DrawScope.drawScene(
     drawRodAndLine(phase, tension, w, h, mouth?.x ?: floatX, mouth?.y ?: floatY, clock)
 
     if (mouth == null) {
-        drawFloat(phase, floatX, floatY, distance, taking, knocking, clock)
+        drawFloat(phase, floatX, floatY, distance, taking, knocking, ui, clock)
     }
 
     drawReeds(w, h, horizon, clock)
 
+    // Laid out from the bottom in dp rather than at fixed pixel offsets, so
+    // the readouts are the same size in the hand on any screen.
+    val barH = 13f * ui
+    val gap = 6f * ui
+    val margin = 13f * ui
+    val lower = h - margin - barH
+    val upper = lower - gap - barH
+    val inset = 24f * ui
+
     if (phase == Phase.Power) {
-        meter(34f, h - 44f, w - 68f, 16f, power, RrrColors.Khaki)
+        meter(inset, lower, w - inset * 2, barH, power, RrrColors.Khaki)
     }
 
     if (phase == Phase.Hooked) {
@@ -1138,12 +1154,12 @@ private fun DrawScope.drawScene(
         val danger = tension >= 1f || tension <= 0.16f
 
         meter(
-            34f, h - 74f, w - 68f, 15f,
+            inset, upper, w - inset * 2, barH,
             tension.coerceAtMost(1f),
             if (danger) RrrColors.Danger else Color(0xFF8B9A5E),
             listOf(0f..0.16f, 0.92f..1f),
         )
-        meter(34f, h - 40f, w - 68f, 15f, reeled, RrrColors.Khaki)
+        meter(inset, lower, w - inset * 2, barH, reeled, RrrColors.Khaki)
     }
 }
 
@@ -1893,6 +1909,7 @@ private fun DrawScope.drawFloat(
     distance: Float,
     taking: Boolean,
     knocking: Boolean,
+    ui: Float,
     t: Float,
 ) {
     if (phase == Phase.Ready || phase == Phase.Power) {
@@ -1903,7 +1920,7 @@ private fun DrawScope.drawFloat(
     // up. Making these look identical turned every bite into a coin flip
     // nobody could learn, which is not difficulty, it is a tax. Told apart,
     // reading the float becomes the skill the game is actually about.
-    val scale = 1.0f + distance * 1.1f
+    val scale = (1.0f + distance * 1.1f) * (0.7f + ui * 0.3f)
     // A take pulls it right under. That is the signal the whole game turns
     // on, and at this size a ten pixel nudge was easy to miss entirely -
     // which is half of why the thing felt like guesswork.
