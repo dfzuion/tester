@@ -3,7 +3,7 @@ import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functio
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import Stripe from "stripe";
 import { Collections, REGION, REFERRAL_REFERRER_PENCE, REFERRAL_REFEREE_PENCE, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ENFORCE_APP_CHECK } from "./config";
-import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
+import { allocateEntryNumbers, planEntryNumbers, commitEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
 import { moveCredit, moveCreditStandalone, prepareCreditMove, payReferralIfDue } from "./credits";
 import { awardInstantWins } from "./instantwins";
 import { computePrice, validatePromotion, PriceBreakdown } from "./pricing";
@@ -403,9 +403,13 @@ export const createMixedOrderAndPaymentIntent = onCall(
     type AllocatedLine = PricedLine & { entryNumbers: number[] };
     const allocatedLines: AllocatedLine[] = await db.runTransaction(async (tx) => {
       // Every read for every line happens before any write in this
-      // transaction - the credit move reads the user first, then each
-      // competition is read and allocated in turn, and only once all of that
-      // reading is done does anything get written.
+      // transaction. Firestore refuses a read that comes after a write in
+      // the same transaction, and allocateEntryNumbers does one read then
+      // one write internally - fine called once, but calling it in a loop
+      // for a multi-raffle basket would read raffle 2 AFTER writing raffle
+      // 1, and the whole transaction would throw. So: the credit move reads
+      // the user first, then every line is planned (read-only) in one pass,
+      // and only once every read is done does anything get committed.
       const spend = creditApplied > 0
         ? await prepareCreditMove(tx, {
             uid, deltaPence: -creditApplied, reason: "order_spend",
@@ -413,14 +417,19 @@ export const createMixedOrderAndPaymentIntent = onCall(
           })
         : null;
 
-      const allocated: AllocatedLine[] = [];
+      const plans: Array<{ line: PricedLine; plan: Awaited<ReturnType<typeof planEntryNumbers>> }> = [];
       for (const line of pricedLines) {
         const compRef = db.collection(Collections.competitions).doc(line.competitionId);
-        const alloc = await allocateEntryNumbers(tx, compRef, line.quantity);
-        allocated.push({ ...line, entryNumbers: alloc.numbers });
+        const plan = await planEntryNumbers(tx, compRef, line.quantity);
+        plans.push({ line, plan });
       }
 
       spend?.apply(tx);
+
+      const allocated: AllocatedLine[] = plans.map(({ line, plan }) => {
+        commitEntryNumbers(tx, plan);
+        return { ...line, entryNumbers: plan.result.numbers };
+      });
 
       tx.set(orderRef, {
         orderNumber,

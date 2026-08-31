@@ -61,15 +61,25 @@ export interface AllocationResult {
 }
 
 /**
- * Reserves `quantity` entry numbers for an order. Runs inside the caller's
- * transaction so reservation, order state and the sold counter all commit
- * atomically or not at all.
+ * The read-and-validate half of allocating entry numbers, with no write.
+ * Firestore refuses any read that comes after a write in the same
+ * transaction, so a checkout reserving numbers across MORE THAN ONE
+ * competition (a mixed basket) cannot just call allocateEntryNumbers in a
+ * loop - the second raffle's read would land after the first raffle's
+ * write and the whole transaction would throw. A single-raffle checkout
+ * doesn't hit this (there's only ever one read, one write, in that order),
+ * which is why this split went unnoticed until a real two-raffle basket
+ * was actually paid for.
+ *
+ * Call planEntryNumbers for every line first - every read for every raffle
+ * in the basket - then commitEntryNumbers for every line after, once all
+ * of that reading is done.
  */
-export async function allocateEntryNumbers(
+export async function planEntryNumbers(
   tx: FirebaseFirestore.Transaction,
   competitionRef: FirebaseFirestore.DocumentReference,
   quantity: number
-): Promise<AllocationResult> {
+): Promise<{ competitionRef: FirebaseFirestore.DocumentReference; quantity: number; result: AllocationResult }> {
   const snap = await tx.get(competitionRef);
   if (!snap.exists) throw new HttpsError("not-found", "Raffle not found.");
   const c = snap.data() as any;
@@ -93,12 +103,38 @@ export async function allocateEntryNumbers(
     numbers.push(mode === "random" ? permute(index, max, key) + 1 : index + 1);
   }
 
-  tx.update(competitionRef, {
-    entriesSold: admin.firestore.FieldValue.increment(quantity),
+  return { competitionRef, quantity, result: { numbers, firstIndex: sold } };
+}
+
+/** The write half of planEntryNumbers - call only after every read in the
+ *  transaction (every line's planEntryNumbers included) has already happened. */
+export function commitEntryNumbers(
+  tx: FirebaseFirestore.Transaction,
+  plan: { competitionRef: FirebaseFirestore.DocumentReference; quantity: number }
+): void {
+  tx.update(plan.competitionRef, {
+    entriesSold: admin.firestore.FieldValue.increment(plan.quantity),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+}
 
-  return { numbers, firstIndex: sold };
+/**
+ * Reserves `quantity` entry numbers for an order against a single
+ * competition. Runs inside the caller's transaction so reservation, order
+ * state and the sold counter all commit atomically or not at all. Just
+ * planEntryNumbers immediately followed by commitEntryNumbers - fine for a
+ * single raffle, since one read then one write is always in the right
+ * order; a basket touching more than one raffle uses the two halves
+ * directly instead (see createMixedOrderAndPaymentIntent in payments.ts).
+ */
+export async function allocateEntryNumbers(
+  tx: FirebaseFirestore.Transaction,
+  competitionRef: FirebaseFirestore.DocumentReference,
+  quantity: number
+): Promise<AllocationResult> {
+  const plan = await planEntryNumbers(tx, competitionRef, quantity);
+  commitEntryNumbers(tx, plan);
+  return plan.result;
 }
 
 /** Releases a reservation when a payment fails, is cancelled or expires. */
