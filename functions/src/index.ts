@@ -4,6 +4,7 @@ admin.initializeApp();
 export {
   quoteBasket,
   createOrderAndPaymentIntent,
+  createCreditTopUpIntent,
   stripeWebhook,
   refundOrder,
   releaseExpiredReservations,
