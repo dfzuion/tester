@@ -14,7 +14,8 @@ export type AuditAction =
   | "credit.granted" | "credit.spent" | "credit.returned"
   | "credit.daily_spin"
   | "game.week.paid"
-  | "instantwingame.created" | "instantwingame.updated" | "instantwingame.played" | "instantwingame.claim.updated";
+  | "instantwingame.created" | "instantwingame.updated" | "instantwingame.played" | "instantwingame.claim.updated"
+  | "credit.topup";
 
 export interface AuditParams {
   action: AuditAction;

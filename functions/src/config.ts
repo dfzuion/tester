@@ -75,4 +75,5 @@ export const Collections = {
   gameWeeks: "gameWeeks",
   instantWinGames: "instantWinGames",
   instantWinGamePlays: "instantWinGamePlays",
+  creditTopUps: "creditTopUps",
 } as const;

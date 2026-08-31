@@ -213,6 +213,75 @@ export const createOrderAndPaymentIntent = onCall(
 );
 
 /**
+ * Buying site credit directly, with no raffle involved - what a customer
+ * needs before they can play a paid instant-win game for the first time,
+ * or just wants a balance sitting ready. Deliberately its own function
+ * rather than a variant of createOrderAndPaymentIntent: that one reserves
+ * entry numbers and prices a competition, neither of which apply here, and
+ * bolting a "no raffle" branch onto it would make the entry-number path
+ * harder to trust, not easier.
+ */
+const TOPUP_MIN_PENCE = STRIPE_MINIMUM_PENCE;
+const TOPUP_MAX_PENCE = 500_00;
+
+export const createCreditTopUpIntent = onCall(
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const uid = requireAuth(req);
+    await assertNotRateLimited(`topup:${uid}`, 10, 60_000);
+
+    const db = admin.firestore();
+    const { amountPence, idempotencyKey } = req.data ?? {};
+    const amount = Number(amountPence);
+    if (!Number.isInteger(amount) || amount < TOPUP_MIN_PENCE || amount > TOPUP_MAX_PENCE) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Choose an amount between £${(TOPUP_MIN_PENCE / 100).toFixed(2)} and £${(TOPUP_MAX_PENCE / 100).toFixed(2)}.`
+      );
+    }
+    if (!idempotencyKey || typeof idempotencyKey !== "string") {
+      throw new HttpsError("invalid-argument", "Missing idempotency key.");
+    }
+
+    const replay = await db.collection(Collections.creditTopUps)
+      .where("userId", "==", uid).where("idempotencyKey", "==", idempotencyKey).limit(1).get();
+    if (!replay.empty) {
+      const t = replay.docs[0].data();
+      return { topUpId: replay.docs[0].id, clientSecret: t.stripeClientSecret ?? null, amountPence: t.amountPence };
+    }
+
+    const ref = db.collection(Collections.creditTopUps).doc();
+    await ref.set({
+      userId: uid,
+      amountPence: amount,
+      status: "pending",
+      idempotencyKey,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const intent = await stripe().paymentIntents.create(
+      {
+        amount,
+        currency: "gbp",
+        automatic_payment_methods: { enabled: true },
+        metadata: { kind: "credit_topup", topUpId: ref.id, userId: uid },
+        description: "Rod Runners Raffles - site credit top-up",
+      },
+      { idempotencyKey: `topup_${ref.id}` }
+    );
+
+    await ref.update({
+      stripePaymentIntentId: intent.id,
+      stripeClientSecret: intent.client_secret,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { topUpId: ref.id, clientSecret: intent.client_secret, amountPence: amount };
+  }
+);
+
+/**
  * The only place an order becomes "paid". Signature-verified, so the client
  * can never claim a successful payment.
  */
@@ -242,12 +311,24 @@ export const stripeWebhook = onRequest(
 
     try {
       switch (event.type) {
-        case "payment_intent.succeeded":
-          await handleSucceeded(event.data.object as Stripe.PaymentIntent); break;
-        case "payment_intent.payment_failed":
-          await handleFailedOrCancelled(event.data.object as Stripe.PaymentIntent, "failed"); break;
-        case "payment_intent.canceled":
-          await handleFailedOrCancelled(event.data.object as Stripe.PaymentIntent, "cancelled"); break;
+        case "payment_intent.succeeded": {
+          const intent = event.data.object as Stripe.PaymentIntent;
+          if (intent.metadata?.kind === "credit_topup") await handleTopUpSucceeded(intent);
+          else await handleSucceeded(intent);
+          break;
+        }
+        case "payment_intent.payment_failed": {
+          const intent = event.data.object as Stripe.PaymentIntent;
+          if (intent.metadata?.kind === "credit_topup") await handleTopUpFailedOrCancelled(intent, "failed");
+          else await handleFailedOrCancelled(intent, "failed");
+          break;
+        }
+        case "payment_intent.canceled": {
+          const intent = event.data.object as Stripe.PaymentIntent;
+          if (intent.metadata?.kind === "credit_topup") await handleTopUpFailedOrCancelled(intent, "cancelled");
+          else await handleFailedOrCancelled(intent, "cancelled");
+          break;
+        }
         case "charge.refunded":
           await handleRefund(event.data.object as Stripe.Charge); break;
         default:
@@ -378,6 +459,67 @@ async function settlePaidOrder(
   });
 }
 
+/** The credit_topup twin of handleSucceeded - same shape, no entries or stock. */
+async function handleTopUpSucceeded(intent: Stripe.PaymentIntent) {
+  const db = admin.firestore();
+  const topUpId = intent.metadata.topUpId;
+  if (!topUpId) return;
+  const ref = db.collection(Collections.creditTopUps).doc(topUpId);
+
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const t = snap.data()!;
+    if (t.status === "paid") return null; // already processed
+    if (intent.amount_received !== Number(t.amountPence)) {
+      tx.update(ref, { status: "review", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      return null;
+    }
+    const move = await prepareCreditMove(tx, {
+      uid: t.userId,
+      deltaPence: t.amountPence,
+      reason: "credit_topup",
+      description: "Site credit top-up",
+      orderId: topUpId,
+    });
+    move.apply(tx);
+    tx.update(ref, {
+      status: "paid",
+      paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      stripeChargeId: typeof intent.latest_charge === "string" ? intent.latest_charge : null,
+      balanceAfterPence: move.balanceAfterPence,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return t;
+  });
+
+  if (!result) return;
+
+  await writeAudit({
+    action: "credit.topup", actorId: "system", actorRole: "system",
+    objectType: "creditTopUp", objectId: topUpId,
+    newValue: { amountPence: result.amountPence, userId: result.userId },
+  });
+  await createUserNotification(result.userId, {
+    category: "purchase",
+    title: "Credit added",
+    body: `£${(Number(result.amountPence) / 100).toFixed(2)} of site credit has been added to your account.`,
+    deepLink: "rrr://account",
+  });
+  await pushToUser(result.userId, "purchase", "Credit added",
+    `£${(Number(result.amountPence) / 100).toFixed(2)} of site credit is in your account.`, {});
+}
+
+async function handleTopUpFailedOrCancelled(intent: Stripe.PaymentIntent, status: "failed" | "cancelled") {
+  const topUpId = intent.metadata.topUpId;
+  if (!topUpId) return;
+  await admin.firestore().collection(Collections.creditTopUps).doc(topUpId).update({
+    status,
+    failureMessage: intent.last_payment_error?.message ?? null,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 async function handleFailedOrCancelled(intent: Stripe.PaymentIntent, status: "failed" | "cancelled") {
   const db = admin.firestore();
   const orderId = intent.metadata.orderId;
@@ -419,7 +561,10 @@ async function handleRefund(charge: Stripe.Charge) {
   const db = admin.firestore();
   const orderId = charge.metadata?.orderId
     ?? (await db.collection(Collections.orders).where("stripeChargeId", "==", charge.id).limit(1).get()).docs[0]?.id;
-  if (!orderId) return;
+  if (!orderId) {
+    await handleTopUpRefund(charge);
+    return;
+  }
   const full = charge.amount_refunded >= charge.amount;
 
   await db.collection(Collections.orders).doc(orderId).update({
@@ -459,6 +604,49 @@ async function handleRefund(charge: Stripe.Charge) {
     action: "refund.processed", actorId: "system", actorRole: "system",
     objectType: "order", objectId: orderId, newValue: { refundedPence: charge.amount_refunded, full },
   });
+}
+
+/** The credit_topup twin of a refund - claws back what's still there. If the
+ *  customer has already spent the credit, moveCreditStandalone refuses to
+ *  take the balance negative, so that case is flagged for manual review
+ *  rather than silently forced through. */
+async function handleTopUpRefund(charge: Stripe.Charge) {
+  const db = admin.firestore();
+  const snap = (await db.collection(Collections.creditTopUps)
+    .where("stripeChargeId", "==", charge.id).limit(1).get()).docs[0];
+  if (!snap) return;
+
+  const topUp = snap.data();
+  const full = charge.amount_refunded >= charge.amount;
+
+  await snap.ref.update({
+    status: full ? "refunded" : "partially_refunded",
+    refundedPence: charge.amount_refunded,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  try {
+    await moveCreditStandalone({
+      uid: topUp.userId,
+      deltaPence: -charge.amount_refunded,
+      reason: "credit_topup",
+      description: "Refund of a site credit top-up",
+      orderId: snap.id,
+    });
+    await writeAudit({
+      action: "credit.topup", actorId: "system", actorRole: "system",
+      objectType: "creditTopUp", objectId: snap.id,
+      newValue: { refundedPence: charge.amount_refunded, full },
+    });
+  } catch (err) {
+    // Balance couldn't cover the clawback - already spent. Flag it instead
+    // of crashing the webhook (Stripe would just retry and fail the same way).
+    await writeAudit({
+      action: "credit.topup", actorId: "system", actorRole: "system",
+      objectType: "creditTopUp", objectId: snap.id,
+      newValue: { refundClawbackFailed: true, refundedPence: charge.amount_refunded },
+    });
+  }
 }
 
 /** Admin-initiated refund. Stripe is the source of truth; the webhook finishes the job. */

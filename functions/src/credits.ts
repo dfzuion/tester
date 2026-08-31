@@ -21,7 +21,7 @@ import { writeAudit } from "./audit";
 export type CreditReason =
   | "coupon" | "referral" | "instant_win" | "admin_grant"
   | "order_spend" | "order_refund" | "order_released" | "daily_spin"
-  | "game_leaderboard" | "instant_win_game" | "instant_win_game_charge";
+  | "game_leaderboard" | "instant_win_game" | "instant_win_game_charge" | "credit_topup";
 
 export interface CreditMovement {
   uid: string;
