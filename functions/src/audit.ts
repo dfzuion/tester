@@ -13,7 +13,8 @@ export type AuditAction =
   | "credit.coupon.created" | "credit.coupon.updated" | "credit.coupon.redeemed"
   | "credit.granted" | "credit.spent" | "credit.returned"
   | "credit.daily_spin"
-  | "game.week.paid";
+  | "game.week.paid"
+  | "instantwingame.created" | "instantwingame.updated" | "instantwingame.played" | "instantwingame.claim.updated";
 
 export interface AuditParams {
   action: AuditAction;

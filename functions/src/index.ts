@@ -42,6 +42,18 @@ export {
 } from "./instantwins";
 
 export {
+  createInstantWinGame,
+  updateInstantWinGame,
+  addInstantWinGameStock,
+  removeInstantWinGamePrize,
+  listInstantWinGames,
+  listActiveInstantWinGames,
+  playInstantWinGame,
+  setInstantWinGameClaimStatus,
+  listInstantWinGameWins,
+} from "./instantwingames";
+
+export {
   bootstrapFirstAdmin,
   listAdminUsers,
   grantAdminByEmail,

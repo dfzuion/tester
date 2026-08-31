@@ -112,6 +112,13 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; html: string }> = {
 <p>{{settlement}}</p>
 <p>Rod Runners Raffles</p>`,
   },
+  instant_win_game_notification: {
+    subject: "You won an instant prize: {{prizeName}}",
+    html: `<p>Hi {{displayName}},</p>
+<p>One of your instant-win cards was a winner - you've won <strong>{{prizeName}}</strong>.</p>
+<p>We'll be in touch shortly to arrange getting it to you.</p>
+<p>Rod Runners Raffles</p>`,
+  },
   welcome: {
     subject: "Welcome to Rod Runners Raffles",
     html: `<p>Hi {{displayName}},</p>

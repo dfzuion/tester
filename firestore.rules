@@ -138,6 +138,29 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /**
+     * Scratch & win games. The prize table (odds, stock) stays admin-only,
+     * same reasoning as instant wins hiding ticket numbers - a client that
+     * could read the raw document could read the odds or which prizes are
+     * still in stock. listActiveScratchGames strips all of that down to what
+     * the page actually needs.
+     */
+    match /instantWinGames/{id} {
+      allow get, list: if isAdmin();
+      allow write: if false;
+    }
+
+    /**
+     * One play document per play - there's no daily limit on these any more,
+     * so nothing for a customer to poll for. The result comes back straight
+     * from playInstantWinGame's response instead, so these stay admin-only,
+     * same as the ticket-number instant wins.
+     */
+    match /instantWinGamePlays/{id} {
+      allow get, list: if isAdmin();
+      allow write: if false;
+    }
+
     match /winners/{id} {
       // A customer can always see their own wins, published or not. Without
       // this, "My wins" queried by winnerUserId with no published filter, and

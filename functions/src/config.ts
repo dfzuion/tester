@@ -73,4 +73,6 @@ export const Collections = {
   dailySpins: "dailySpins",
   gameScores: "gameScores",
   gameWeeks: "gameWeeks",
+  instantWinGames: "instantWinGames",
+  instantWinGamePlays: "instantWinGamePlays",
 } as const;

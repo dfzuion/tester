@@ -16,6 +16,10 @@ service firebase.storage {
       allow read: if true;
       allow write: if isAdmin() && isImage() && request.resource.size < 8 * 1024 * 1024;
     }
+    match /instantWinGames/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && request.resource.size < 8 * 1024 * 1024;
+    }
 
     // Profile photos: owner-writable, 2MB cap.
     match /users/{uid}/{allPaths=**} {
