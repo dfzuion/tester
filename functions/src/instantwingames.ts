@@ -325,6 +325,13 @@ export const listActiveInstantWinGames = onCall({ region: REGION, enforceAppChec
     games: snap.docs.map((d) => {
       const g = d.data() as InstantWinGameDoc;
       const topPrize = g.prizes.reduce((max, p) => (p.valuePence > max ? p.valuePence : max), 0);
+      // Aggregate stock only - a total and a remaining count, the same shape
+      // a raffle's entries_sold/max_entries is public. That's safe to show
+      // (it's what "3/5 iPhones left" needs); the per-prize weight and
+      // per-line stock that would let someone back-calculate real odds stays
+      // out, same as it always has.
+      const prizesTotal = g.prizes.reduce((sum, p) => sum + p.quantityTotal, 0);
+      const prizesRemaining = g.prizes.reduce((sum, p) => sum + p.quantityRemaining, 0);
       return {
         id: d.id,
         title: g.title,
@@ -333,7 +340,9 @@ export const listActiveInstantWinGames = onCall({ region: REGION, enforceAppChec
         mechanic: g.mechanic,
         pricePence: g.pricePence,
         topPrizeValuePence: topPrize,
-        prizesLeft: g.prizes.some((p) => p.quantityRemaining > 0),
+        prizesLeft: prizesRemaining > 0,
+        prizesTotal,
+        prizesRemaining,
       };
     }),
   };
