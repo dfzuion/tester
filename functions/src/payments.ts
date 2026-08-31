@@ -6,7 +6,7 @@ import { Collections, REGION, REFERRAL_REFERRER_PENCE, REFERRAL_REFEREE_PENCE, S
 import { allocateEntryNumbers, materialiseEntries, releaseReservation } from "./allocation";
 import { moveCredit, moveCreditStandalone, prepareCreditMove, payReferralIfDue } from "./credits";
 import { awardInstantWins } from "./instantwins";
-import { computePrice, validatePromotion } from "./pricing";
+import { computePrice, validatePromotion, PriceBreakdown } from "./pricing";
 import { writeAudit } from "./audit";
 import { queueEmail, pushToUser, createUserNotification } from "./notifications";
 import { assertNotRateLimited, requireAuth, requireAdmin } from "./guards";
@@ -264,6 +264,257 @@ export const createOrderAndPaymentIntent = onCall(
   }
 );
 
+/** A basket can mix raffles, but the same raffle twice should be one line
+ *  with a bigger quantity - kept as a hard cap so a malformed client can't
+ *  send an enormous or duplicated basket into the pricing/allocation loop. */
+const MAX_BASKET_LINES = 20;
+
+function readBasketItems(data: any): Array<{ competitionId: string; quantity: number; promoCode: string | null }> {
+  const items = data?.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new HttpsError("invalid-argument", "Your basket is empty.");
+  }
+  if (items.length > MAX_BASKET_LINES) {
+    throw new HttpsError("invalid-argument", "Too many raffles in one basket.");
+  }
+  const seen = new Set<string>();
+  const out: Array<{ competitionId: string; quantity: number; promoCode: string | null }> = [];
+  for (const raw of items) {
+    const competitionId = raw?.competitionId;
+    if (!competitionId || typeof competitionId !== "string") {
+      throw new HttpsError("invalid-argument", "Missing raffle on a basket line.");
+    }
+    if (seen.has(competitionId)) {
+      throw new HttpsError("invalid-argument", "Each raffle can only appear once in your basket - combine the quantity instead.");
+    }
+    seen.add(competitionId);
+    const quantity = Number(raw?.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      throw new HttpsError("invalid-argument", "Choose how many entries you'd like for each raffle.");
+    }
+    out.push({ competitionId, quantity, promoCode: raw?.promoCode ?? null });
+  }
+  return out;
+}
+
+/** Basket twin of quoteBasket: prices every line and returns a grand total.
+ *  No numbers reserved yet, same as the single-raffle version. */
+export const quoteMixedBasket = onCall({ region: REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (req: CallableRequest) => {
+  const uid = requireAuth(req);
+  const items = readBasketItems(req.data);
+
+  const lines: Array<{ competitionId: string; competitionTitle: string; breakdown: PriceBreakdown }> = [];
+  let grandTotalPence = 0;
+  for (const item of items) {
+    const { breakdown, competition } = await computePrice({
+      competitionId: item.competitionId, quantity: item.quantity, promoCode: item.promoCode, userId: uid,
+    });
+    grandTotalPence += breakdown.totalPence;
+    lines.push({ competitionId: item.competitionId, competitionTitle: competition.title, breakdown });
+  }
+  return { lines, grandTotalPence };
+});
+
+/**
+ * Basket twin of createOrderAndPaymentIntent: prices every line, reserves
+ * every raffle's entry numbers in one transaction, and opens a single
+ * PaymentIntent for the combined total. Deliberately mirrors the
+ * single-raffle version step for step rather than trying to be clever about
+ * sharing code between them - this is the part where a subtle divergence
+ * would cost someone real money.
+ *
+ * The order document gets an `items` array instead of one flat
+ * competitionId/quantity/entryNumbers - every place that reads an order
+ * (settlePaidOrder, the failure/expiry paths below, and the frontend/admin
+ * surfaces) checks for `items` first and falls back to the old flat shape,
+ * so orders placed before this shipped are never touched or reinterpreted.
+ */
+export const createMixedOrderAndPaymentIntent = onCall(
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const uid = requireAuth(req);
+    await assertNotRateLimited(`checkout:${uid}`, 10, 60_000);
+
+    const db = admin.firestore();
+    const items = readBasketItems(req.data);
+    const { idempotencyKey, creditToApplyPence } = req.data ?? {};
+    if (!idempotencyKey || typeof idempotencyKey !== "string") {
+      throw new HttpsError("invalid-argument", "Missing idempotency key.");
+    }
+
+    const replay = await db.collection(Collections.orders)
+      .where("userId", "==", uid).where("idempotencyKey", "==", idempotencyKey).limit(1).get();
+    if (!replay.empty) {
+      const o = replay.docs[0].data();
+      return {
+        orderId: replay.docs[0].id,
+        orderNumber: o.orderNumber ?? null,
+        clientSecret: o.stripeClientSecret ?? null,
+        paidWithCredit: o.paidWith === "credit",
+        creditAppliedPence: o.creditAppliedPence ?? 0,
+        amountDuePence: o.amountDuePence ?? o.totalPence ?? 0,
+        grandTotalPence: o.totalPence ?? 0,
+        items: Array.isArray(o.items)
+          ? o.items.map((i: any) => ({ competitionId: i.competitionId, competitionTitle: i.competitionTitle, quantity: i.quantity, breakdown: i.breakdown, entryNumbersPending: Array.isArray(i.entryNumbers) ? i.entryNumbers.length : 0 }))
+          : [],
+      };
+    }
+
+    const userSnap = await db.collection(Collections.users).doc(uid).get();
+    const user = userSnap.data() ?? {};
+    if (user.suspended === true) throw new HttpsError("permission-denied", "This account can't enter raffles. Contact support.");
+    if (user.ageConfirmed !== true) throw new HttpsError("failed-precondition", "Confirm you're 18 or over before entering.");
+
+    // Price every line before touching any write-side state, same "quote
+    // first, reserve second" order as the single-raffle checkout.
+    type PricedLine = { competitionId: string; competitionTitle: string; competitionImageUrl: string | null; quantity: number; breakdown: PriceBreakdown };
+    const pricedLines: PricedLine[] = [];
+    let grandTotalPence = 0;
+    for (const item of items) {
+      const { breakdown, competition } = await computePrice({
+        competitionId: item.competitionId, quantity: item.quantity, promoCode: item.promoCode, userId: uid,
+      });
+      grandTotalPence += breakdown.totalPence;
+      pricedLines.push({
+        competitionId: item.competitionId,
+        competitionTitle: competition.title,
+        competitionImageUrl: competition.heroImageUrl ?? null,
+        quantity: item.quantity,
+        breakdown,
+      });
+    }
+
+    const orderRef = db.collection(Collections.orders).doc();
+    const orderNumber = await nextOrderNumber();
+
+    const requestedCredit = Math.max(0, Math.floor(Number(creditToApplyPence ?? 0)));
+    const availableCredit = Math.max(0, Number(user.creditBalancePence ?? 0));
+    const creditApplied = Math.min(requestedCredit, availableCredit, grandTotalPence);
+    const amountDue = grandTotalPence - creditApplied;
+
+    if (amountDue > 0 && amountDue < STRIPE_MINIMUM_PENCE) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Card payments start at £${(STRIPE_MINIMUM_PENCE / 100).toFixed(2)}. ` +
+        "Add a few more entries, or use your site credit."
+      );
+    }
+
+    type AllocatedLine = PricedLine & { entryNumbers: number[] };
+    const allocatedLines: AllocatedLine[] = await db.runTransaction(async (tx) => {
+      // Every read for every line happens before any write in this
+      // transaction - the credit move reads the user first, then each
+      // competition is read and allocated in turn, and only once all of that
+      // reading is done does anything get written.
+      const spend = creditApplied > 0
+        ? await prepareCreditMove(tx, {
+            uid, deltaPence: -creditApplied, reason: "order_spend",
+            description: `Order ${orderNumber}`, orderId: orderRef.id,
+          })
+        : null;
+
+      const allocated: AllocatedLine[] = [];
+      for (const line of pricedLines) {
+        const compRef = db.collection(Collections.competitions).doc(line.competitionId);
+        const alloc = await allocateEntryNumbers(tx, compRef, line.quantity);
+        allocated.push({ ...line, entryNumbers: alloc.numbers });
+      }
+
+      spend?.apply(tx);
+
+      tx.set(orderRef, {
+        orderNumber,
+        userId: uid,
+        userEmail: user.email ?? req.auth?.token.email ?? null,
+        userDisplayName: user.displayName ?? "Angler",
+        items: allocated.map((a) => ({
+          competitionId: a.competitionId,
+          competitionTitle: a.competitionTitle,
+          competitionImageUrl: a.competitionImageUrl,
+          quantity: a.quantity,
+          entryNumbers: a.entryNumbers,
+          breakdown: a.breakdown,
+        })),
+        totalPence: grandTotalPence,
+        creditAppliedPence: creditApplied,
+        amountDuePence: amountDue,
+        currency: "gbp",
+        paymentStatus: "pending",
+        orderStatus: "reserved",
+        idempotencyKey,
+        reservedUntil: admin.firestore.Timestamp.fromMillis(Date.now() + RESERVATION_TTL_MS),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return allocated;
+    });
+
+    const itemsResponse = allocatedLines.map((a) => ({
+      competitionId: a.competitionId, competitionTitle: a.competitionTitle,
+      quantity: a.quantity, breakdown: a.breakdown, entryNumbersPending: a.entryNumbers.length,
+    }));
+
+    if (amountDue === 0) {
+      await orderRef.update({
+        paymentStatus: "paid",
+        orderStatus: "confirmed",
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paidWith: "credit",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await settlePaidOrder(orderRef.id);
+      await writeAudit({
+        action: "order.created", actorId: uid, actorRole: "customer",
+        objectType: "order", objectId: orderRef.id,
+        newValue: { orderNumber, items: allocatedLines.map((a) => ({ competitionId: a.competitionId, quantity: a.quantity })), paidWithCreditPence: creditApplied },
+      });
+      return {
+        orderId: orderRef.id, orderNumber, clientSecret: null, paidWithCredit: true,
+        creditAppliedPence: creditApplied, amountDuePence: 0, grandTotalPence, items: itemsResponse,
+      };
+    }
+
+    const { paymentMethodId, savePaymentMethod } = req.data ?? {};
+    const customerId = await getOrCreateStripeCustomer(uid, user.email ?? req.auth?.token.email ?? null);
+    if (paymentMethodId) await requireOwnedPaymentMethod(uid, paymentMethodId);
+
+    const intent = await stripe().paymentIntents.create(
+      {
+        amount: amountDue,
+        currency: "gbp",
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+        ...(paymentMethodId ? { payment_method: paymentMethodId } : {}),
+        ...(savePaymentMethod === true && !paymentMethodId ? { setup_future_usage: "off_session" as const } : {}),
+        metadata: {
+          orderId: orderRef.id, userId: uid,
+          competitionIds: allocatedLines.map((a) => a.competitionId).join(","),
+        },
+        description: `Rod Runners Raffles order ${orderNumber}`,
+      },
+      { idempotencyKey: `order_${orderRef.id}` }
+    );
+
+    await orderRef.update({
+      stripePaymentIntentId: intent.id,
+      stripeClientSecret: intent.client_secret,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await writeAudit({
+      action: "order.created", actorId: uid, actorRole: "customer",
+      objectType: "order", objectId: orderRef.id,
+      newValue: { orderNumber, items: allocatedLines.map((a) => ({ competitionId: a.competitionId, quantity: a.quantity })), totalPence: grandTotalPence },
+    });
+
+    return {
+      orderId: orderRef.id, orderNumber, clientSecret: intent.client_secret, paidWithCredit: false,
+      creditAppliedPence: creditApplied, amountDuePence: amountDue, grandTotalPence, items: itemsResponse,
+    };
+  }
+);
+
 /**
  * Buying site credit directly, with no raffle involved - what a customer
  * needs before they can play a paid instant-win game for the first time,
@@ -506,37 +757,63 @@ async function settlePaidOrder(
   const result = snap.data();
   if (!result) return;
 
-  await materialiseEntries({
-    orderId,
-    userId: result.userId,
-    userDisplayName: result.userDisplayName,
-    competitionId: result.competitionId,
-    competitionTitle: result.competitionTitle,
-    numbers: result.entryNumbers,
-  });
+  // A mixed-basket order carries an `items` array, one entry per raffle. An
+  // older, single-raffle order has its one competition's fields sitting
+  // directly on the order instead. Normalising to a list here - rather than
+  // forking this whole function in two - means entry materialisation,
+  // instant wins and the confirmation notice only have to be written once
+  // and work identically for both shapes.
+  type Line = { competitionId: string; competitionTitle: string; quantity: number; entryNumbers: number[]; promoCode: string | null };
+  const lines: Line[] = Array.isArray(result.items) && result.items.length
+    ? result.items.map((i: any) => ({
+        competitionId: i.competitionId,
+        competitionTitle: i.competitionTitle,
+        quantity: i.quantity,
+        entryNumbers: i.entryNumbers ?? [],
+        promoCode: i.breakdown?.promoCode ?? null,
+      }))
+    : [{
+        competitionId: result.competitionId,
+        competitionTitle: result.competitionTitle,
+        quantity: result.quantity,
+        entryNumbers: result.entryNumbers ?? [],
+        promoCode: result.breakdown?.promoCode ?? null,
+      }];
 
-  // Instant wins are settled after the entries exist, so a prize can only ever
-  // attach to a number the customer genuinely holds.
-  const instantWins = await awardInstantWins({
-    competitionId: result.competitionId,
-    numbers: result.entryNumbers,
-    userId: result.userId,
-    userDisplayName: result.userDisplayName,
-    orderId,
-  });
-  if (instantWins.length) {
-    await db.collection(Collections.orders).doc(orderId).update({
-      instantWins: instantWins.map((w) => ({
-        instantWinId: w.id,
-        entryNumber: w.entryNumber,
-        prizeName: w.prizeName,
-        valuePence: w.valuePence,
-        imageUrl: w.imageUrl,
-      })),
+  const allInstantWins: Array<{ instantWinId: string; entryNumber: number; prizeName: string; valuePence: number; imageUrl: string | null }> = [];
+
+  for (const line of lines) {
+    await materialiseEntries({
+      orderId,
+      userId: result.userId,
+      userDisplayName: result.userDisplayName,
+      competitionId: line.competitionId,
+      competitionTitle: line.competitionTitle,
+      numbers: line.entryNumbers,
     });
+
+    // Instant wins are settled after the entries exist, so a prize can only
+    // ever attach to a number the customer genuinely holds.
+    const instantWins = await awardInstantWins({
+      competitionId: line.competitionId,
+      numbers: line.entryNumbers,
+      userId: result.userId,
+      userDisplayName: result.userDisplayName,
+      orderId,
+    });
+    for (const w of instantWins) {
+      allInstantWins.push({
+        instantWinId: w.id, entryNumber: w.entryNumber, prizeName: w.prizeName,
+        valuePence: w.valuePence, imageUrl: w.imageUrl,
+      });
+    }
+
+    if (line.promoCode) await recordRedemption(line.promoCode, result.userId, orderId);
   }
 
-  if (result.breakdown?.promoCode) await recordRedemption(result.breakdown.promoCode, result.userId, orderId);
+  if (allInstantWins.length) {
+    await db.collection(Collections.orders).doc(orderId).update({ instantWins: allInstantWins });
+  }
 
   // A referral only pays out once the referred customer has actually bought
   // something, which is what stops people farming codes with empty accounts.
@@ -557,20 +834,26 @@ async function settlePaidOrder(
     },
   });
 
+  const totalQuantity = lines.reduce((sum, l) => sum + l.quantity, 0);
+  const titleSummary = lines.map((l) => l.competitionTitle).join(", ");
+  const numbersSummary = lines.length > 1
+    ? lines.map((l) => `${l.competitionTitle}: ${l.entryNumbers.join(", ")}`).join(" · ")
+    : (lines[0]?.entryNumbers ?? []).join(", ");
+
   await createUserNotification(result.userId, {
     category: "purchase",
     title: "Entries confirmed",
-    body: `${result.quantity} ${result.quantity === 1 ? "entry" : "entries"} in ${result.competitionTitle}. Your numbers are in My Tickets.`,
+    body: `${totalQuantity} ${totalQuantity === 1 ? "entry" : "entries"} in ${titleSummary}. Your numbers are in My Tickets.`,
     deepLink: `rrr://orders/${orderId}`,
   });
   await pushToUser(result.userId, "purchase", "Entries confirmed",
-    `You're in the draw for ${result.competitionTitle}.`, { orderId });
+    `You're in the draw for ${titleSummary}.`, { orderId });
   await queueEmail(result.userEmail, "purchase_confirmation", {
     displayName: result.userDisplayName,
     orderNumber: result.orderNumber,
-    competitionTitle: result.competitionTitle,
-    quantity: result.quantity,
-    entryNumbers: result.entryNumbers.join(", "),
+    competitionTitle: titleSummary,
+    quantity: totalQuantity,
+    entryNumbers: numbersSummary,
     total: `£${(result.totalPence / 100).toFixed(2)}`,
   });
 }
@@ -656,15 +939,26 @@ async function handleFailedOrCancelled(intent: Stripe.PaymentIntent, status: "fa
         description: `Order ${o.orderNumber} did not complete`, orderId: orderRef.id,
       });
     }
-    const compRef = db.collection(Collections.competitions).doc(o.competitionId);
-    await releaseReservation(tx, compRef, o.quantity);
-    tx.update(orderRef, {
+    // A mixed-basket order releases every raffle it reserved, not just one.
+    const lines: Array<{ competitionId: string; quantity: number }> = Array.isArray(o.items) && o.items.length
+      ? o.items
+      : [{ competitionId: o.competitionId, quantity: o.quantity }];
+    for (const line of lines) {
+      const compRef = db.collection(Collections.competitions).doc(line.competitionId);
+      await releaseReservation(tx, compRef, line.quantity);
+    }
+    const update: FirebaseFirestore.UpdateData<any> = {
       paymentStatus: status,
       orderStatus: "released",
-      entryNumbers: [],
       failureMessage: intent.last_payment_error?.message ?? null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+    if (Array.isArray(o.items) && o.items.length) {
+      update.items = o.items.map((i: any) => ({ ...i, entryNumbers: [] }));
+    } else {
+      update.entryNumbers = [];
+    }
+    tx.update(orderRef, update);
   });
 
   await writeAudit({
@@ -809,12 +1103,23 @@ export const releaseExpiredReservations = onSchedule(
             description: `Order ${o.orderNumber} expired before payment`, orderId: doc.ref.id,
           });
         }
-        const compRef = db.collection(Collections.competitions).doc(o.competitionId);
-        await releaseReservation(tx, compRef, o.quantity);
-        tx.update(doc.ref, {
-          orderStatus: "expired", paymentStatus: "cancelled", entryNumbers: [],
+        const lines: Array<{ competitionId: string; quantity: number }> = Array.isArray(o.items) && o.items.length
+          ? o.items
+          : [{ competitionId: o.competitionId, quantity: o.quantity }];
+        for (const line of lines) {
+          const compRef = db.collection(Collections.competitions).doc(line.competitionId);
+          await releaseReservation(tx, compRef, line.quantity);
+        }
+        const update: FirebaseFirestore.UpdateData<any> = {
+          orderStatus: "expired", paymentStatus: "cancelled",
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        };
+        if (Array.isArray(o.items) && o.items.length) {
+          update.items = o.items.map((i: any) => ({ ...i, entryNumbers: [] }));
+        } else {
+          update.entryNumbers = [];
+        }
+        tx.update(doc.ref, update);
       });
     }
     console.log(`Released ${stale.size} expired reservations`);

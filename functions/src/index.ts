@@ -4,6 +4,8 @@ admin.initializeApp();
 export {
   quoteBasket,
   createOrderAndPaymentIntent,
+  quoteMixedBasket,
+  createMixedOrderAndPaymentIntent,
   createCreditTopUpIntent,
   listSavedPaymentMethods,
   deleteSavedPaymentMethod,
