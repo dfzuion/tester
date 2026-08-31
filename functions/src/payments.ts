@@ -19,6 +19,46 @@ function stripe(): Stripe {
   return stripeClient;
 }
 
+/**
+ * Every customer who ever pays gets a Stripe Customer record the first time
+ * they do, so a card can be saved against something. Cheap to call on every
+ * checkout - it only actually talks to Stripe the first time for a given
+ * user, after that it is just a Firestore read.
+ */
+async function getOrCreateStripeCustomer(uid: string, email: string | null | undefined): Promise<string> {
+  const db = admin.firestore();
+  const userRef = db.collection(Collections.users).doc(uid);
+  const userSnap = await userRef.get();
+  const existing = userSnap.data()?.stripeCustomerId;
+  if (typeof existing === "string" && existing) return existing;
+
+  const customer = await stripe().customers.create({
+    email: email ?? undefined,
+    metadata: { firebaseUID: uid },
+  });
+  await userRef.update({ stripeCustomerId: customer.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  return customer.id;
+}
+
+/**
+ * A saved card only ever gets used by the customer it belongs to. Every
+ * callable below that acts on an existing payment method re-derives the
+ * customer from Firestore and checks Stripe's own record of who owns it -
+ * a uid can never act on a payment method by guessing its id.
+ */
+async function requireOwnedPaymentMethod(uid: string, paymentMethodId: string): Promise<Stripe.PaymentMethod> {
+  if (!paymentMethodId || typeof paymentMethodId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing payment method.");
+  }
+  const userSnap = await admin.firestore().collection(Collections.users).doc(uid).get();
+  const customerId = userSnap.data()?.stripeCustomerId;
+  const method = await stripe().paymentMethods.retrieve(paymentMethodId).catch(() => null);
+  if (!method || !customerId || method.customer !== customerId) {
+    throw new HttpsError("permission-denied", "That card isn't on your account.");
+  }
+  return method;
+}
+
 const RESERVATION_TTL_MS = 15 * 60 * 1000;
 
 /** Step 1 of checkout: price the basket. Read-only, no numbers reserved yet. */
@@ -175,11 +215,23 @@ export const createOrderAndPaymentIntent = onCall(
       };
     }
 
+    // A saved card is only ever reused after Stripe itself has confirmed it
+    // belongs to this customer - requireOwnedPaymentMethod throws otherwise.
+    // Attaching the customer to every card payment (not just ones being
+    // saved) is what lets "save this card" work at all: Stripe can only save
+    // a card against a customer it already knows about.
+    const { paymentMethodId, savePaymentMethod } = req.data ?? {};
+    const customerId = await getOrCreateStripeCustomer(uid, user.email ?? req.auth?.token.email ?? null);
+    if (paymentMethodId) await requireOwnedPaymentMethod(uid, paymentMethodId);
+
     const intent = await stripe().paymentIntents.create(
       {
         amount: amountDue,
         currency: "gbp",
+        customer: customerId,
         automatic_payment_methods: { enabled: true },
+        ...(paymentMethodId ? { payment_method: paymentMethodId } : {}),
+        ...(savePaymentMethod === true && !paymentMethodId ? { setup_future_usage: "off_session" as const } : {}),
         metadata: { orderId: orderRef.id, userId: uid, competitionId, quantity: String(qty) },
         description: `Rod Runners Raffles order ${orderNumber}`,
       },
@@ -260,11 +312,18 @@ export const createCreditTopUpIntent = onCall(
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    const { paymentMethodId, savePaymentMethod } = req.data ?? {};
+    const customerId = await getOrCreateStripeCustomer(uid, req.auth?.token.email ?? null);
+    if (paymentMethodId) await requireOwnedPaymentMethod(uid, paymentMethodId);
+
     const intent = await stripe().paymentIntents.create(
       {
         amount,
         currency: "gbp",
+        customer: customerId,
         automatic_payment_methods: { enabled: true },
+        ...(paymentMethodId ? { payment_method: paymentMethodId } : {}),
+        ...(savePaymentMethod === true && !paymentMethodId ? { setup_future_usage: "off_session" as const } : {}),
         metadata: { kind: "credit_topup", topUpId: ref.id, userId: uid },
         description: "Rod Runners Raffles - site credit top-up",
       },
@@ -278,6 +337,63 @@ export const createCreditTopUpIntent = onCall(
     });
 
     return { topUpId: ref.id, clientSecret: intent.client_secret, amountPence: amount };
+  }
+);
+
+/**
+ * A card only ever shows up here once it has actually been used to pay for
+ * something with "save this card" ticked, or been added from the payment
+ * methods screen - there's no separate "add a card with nothing to pay"
+ * flow yet, so this list is always cards Stripe already confirmed worked.
+ */
+export const listSavedPaymentMethods = onCall(
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const uid = requireAuth(req);
+    const userSnap = await admin.firestore().collection(Collections.users).doc(uid).get();
+    const customerId = userSnap.data()?.stripeCustomerId;
+    if (!customerId) return { methods: [] };
+
+    const [methods, customer] = await Promise.all([
+      stripe().paymentMethods.list({ customer: customerId, type: "card" }),
+      stripe().customers.retrieve(customerId),
+    ]);
+    const defaultId = !customer.deleted ? (customer.invoice_settings?.default_payment_method as string | null) : null;
+
+    return {
+      methods: methods.data.map((m) => ({
+        id: m.id,
+        brand: m.card?.brand ?? "card",
+        last4: m.card?.last4 ?? "····",
+        expMonth: m.card?.exp_month ?? null,
+        expYear: m.card?.exp_year ?? null,
+        isDefault: m.id === defaultId,
+      })),
+    };
+  }
+);
+
+export const deleteSavedPaymentMethod = onCall(
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const uid = requireAuth(req);
+    const { paymentMethodId } = req.data ?? {};
+    await requireOwnedPaymentMethod(uid, paymentMethodId);
+    await stripe().paymentMethods.detach(paymentMethodId);
+    return { removed: true };
+  }
+);
+
+export const setDefaultPaymentMethod = onCall(
+  { region: REGION, secrets: [STRIPE_SECRET_KEY], enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req: CallableRequest) => {
+    const uid = requireAuth(req);
+    const { paymentMethodId } = req.data ?? {};
+    const method = await requireOwnedPaymentMethod(uid, paymentMethodId);
+    await stripe().customers.update(method.customer as string, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+    return { defaultId: paymentMethodId };
   }
 );
 
