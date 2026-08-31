@@ -367,7 +367,13 @@ export const playInstantWinGame = onCall({ region: REGION, enforceAppCheck: ENFO
     const game = gameSnap.data() as InstantWinGameDoc;
     if (game.status !== "active") throw new HttpsError("failed-precondition", "This game isn't running right now.");
 
-    const price = game.pricePence;
+    // Belt and braces: every game created through the admin form always has
+    // a valid price, but a malformed or hand-edited document must never be
+    // allowed to turn into a NaN balance update - fail loudly instead.
+    const price = Number(game.pricePence);
+    if (!Number.isInteger(price) || price < 1) {
+      throw new HttpsError("failed-precondition", "This game isn't set up correctly - no price to play.");
+    }
     const before = Number(userSnap.data()!.creditBalancePence ?? 0);
     if (before < price) {
       throw new HttpsError("failed-precondition", "Not enough credit to play - top up your balance first.");
